@@ -18,6 +18,7 @@ API_PORT = int(os.environ.get("API_PORT") or data['api_endpoint_port'])
 #OPENAI SETTINGS
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") or data['openai_api_key']
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL") or data['opeai_model']
+OPENAI_DEFAULT_TEMPERATURE = os.environ.get("OPENAI_TEMPERATURE") or float(data['openai_default_temperature'])
 OPENAI_MAX_TOKENS = int(data['openai_max_tokens'])
 if "openai_custom_base_prompt" in data:
     OPENAI_CUSTOM_BASE_PROMPT = data['openai_custom_base_prompt']
@@ -37,10 +38,9 @@ else:
 openai.api_key = OPENAI_API_KEY
 ENCODER = tiktoken.get_encoding("gpt2")
 
-OPENAI_DEFAULT_TEMPERATURE = 0.5
 OPENAI_DEFAULT_PROMPT = (
     f'''Say the following: You did not enter a prompt. URL should be http://<IP>:<PORT>/chat?prompt=<prompt>
-    
+
     Join us at https://discord.gg/lukium for the best source of AI resources and tools,
     including free Stable Diffusion Servers running on dedicated RTX 3090 GPUs,
     as well as a community of AI enthusiasts.'''

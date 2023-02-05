@@ -20,10 +20,10 @@ async def chat():
 
     if request.method == "GET":
         prompt = request.args.get("prompt", OPENAI_DEFAULT_PROMPT)
-        temperature = request.args.get("temperature", OPENAI_DEFAULT_TEMPERATURE)
+        temperature = float(request.args.get("temperature", OPENAI_DEFAULT_TEMPERATURE))
     elif request.method == "POST":
         prompt = request.json.get("prompt", OPENAI_DEFAULT_PROMPT)
-        temperature = request.json.get("temperature", OPENAI_DEFAULT_TEMPERATURE)
+        temperature = float(request.json.get("temperature", OPENAI_DEFAULT_TEMPERATURE))
     
     try:
         response = await ChatGPT.ask(

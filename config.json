@@ -3,6 +3,7 @@
     "api_endpoint_port": "8080",
     "opeai_model": "text-chat-davinci-002-20221122",
     "openai_api_key": "You API KEY GOES HERE",
+    "openai_default_temperature": "0.5",
     "openai_max_tokens": "4000",
     "//openai_custom_base_prompt": "This is a custom prompt. You can use it to generate text based on your own prompt."
 }

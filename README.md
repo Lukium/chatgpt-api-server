@@ -23,4 +23,4 @@ ChatGPT Web API server using the Official OpenAI API running on Flask that can r
 3. Run `chatgpt-api-server.py` using `python ./chatgpt-api-server.py` (or whatever method available to you to run python scripts)
 
 4. Access the API by using either GET or POST request. You can also make the request via browser with the following format:
-	http://<IP>:<PORT>/chat?prompt=<prompt>&temperature=<temperature>
+	`http://<IP>:<PORT>/chat?prompt=<prompt>&temperature=<temperature>`

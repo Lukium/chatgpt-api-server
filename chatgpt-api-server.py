@@ -9,22 +9,26 @@ from waitress import serve
 
 #IMPORT FROM PROJECT SETTINGS
 from chatgpt import ChatGPT
-from settings import API_HOST, API_PORT
+from settings import API_HOST, API_PORT, OPENAI_DEFAULT_TEMPERATURE, OPENAI_DEFAULT_PROMPT, OPENAI_DEFAULT_PROMPT
 
 #SETUP FLASK APP
 app = Flask(__name__)
 
 #SETUP ROUTES
-@app.route("/chat", methods=["GET"])
+@app.route("/chat", methods=["GET", "POST"])
 async def chat():
 
-    prompt = request.args.get("prompt", None)
-    if prompt is None:
-        return jsonify({"error": "Request did not include a prompt"}), 400
+    if request.method == "GET":
+        prompt = request.args.get("prompt", OPENAI_DEFAULT_PROMPT)
+        temperature = request.args.get("temperature", OPENAI_DEFAULT_TEMPERATURE)
+    elif request.method == "POST":
+        prompt = request.json.get("prompt", OPENAI_DEFAULT_PROMPT)
+        temperature = request.json.get("temperature", OPENAI_DEFAULT_TEMPERATURE)
     
     try:
         response = await ChatGPT.ask(
-            prompt=prompt
+            prompt=prompt,
+            temperature=temperature
         )
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500

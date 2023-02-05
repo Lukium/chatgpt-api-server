@@ -38,6 +38,13 @@ openai.api_key = OPENAI_API_KEY
 ENCODER = tiktoken.get_encoding("gpt2")
 
 OPENAI_DEFAULT_TEMPERATURE = 0.5
+OPENAI_DEFAULT_PROMPT = (
+    f'''Say the following: You did not enter a prompt. URL should be http://<IP>:<PORT>/chat?prompt=<prompt>
+    
+    Join us at https://discord.gg/lukium for the best source of AI resources and tools,
+    including free Stable Diffusion Servers running on dedicated RTX 3090 GPUs,
+    as well as a community of AI enthusiasts.'''
+)
 
 #DEFINE SETTINGS FUNCTIONS
 async def get_max_tokens(prompt: str) -> int:

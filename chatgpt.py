@@ -6,11 +6,11 @@ import asyncio
 import openai
 
 #IMPORT FROM PROJECT SETTINGS
-from settings import OPENAI_MODEL, OPENAI_DEFAULT_TEMPERATURE, OPENAI_CUSTOM_BASE_PROMPT, get_max_tokens
+from settings import OPENAI_MODEL, OPENAI_DEFAULT_TEMPERATURE, OPENAI_DEFAULT_PROMPT, OPENAI_CUSTOM_BASE_PROMPT, get_max_tokens
 
 class ChatGPT:
 
-    async def ask(prompt: str = "Who was the first president of the united states?", user: str = "User", temperature: int = OPENAI_DEFAULT_TEMPERATURE) -> str:
+    async def ask(prompt: str = OPENAI_DEFAULT_PROMPT, user: str = "User", temperature: int = OPENAI_DEFAULT_TEMPERATURE) -> str:
 
         openai_prompt = (
                 OPENAI_CUSTOM_BASE_PROMPT

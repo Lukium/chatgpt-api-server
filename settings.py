@@ -24,14 +24,9 @@ if "openai_custom_base_prompt" in data:
     OPENAI_CUSTOM_BASE_PROMPT = data['openai_custom_base_prompt']
 else:
     OPENAI_CUSTOM_BASE_PROMPT = (
-        f'''You are ChatGPT, a large language model trained by OpenAI. Respond conversationally. Do not answer as the user. Current date: {str(date.today())}
-
-
-        User: Hello
-        ChatGPT: Hello! How can I help you today? <|im_end|>
-        
-
-        '''
+        f'You are ChatGPT, a large language model trained by OpenAI. Respond conversationally. Do not answer as the user. Current date: {str(date.today())}.\n\n'
+        f'User: Hello\n'
+        f'ChatGPT: Hello! How can I help you today? <|im_end|>\n\n\n'
     )
 
 #DEFINE OTHER SETTINGS

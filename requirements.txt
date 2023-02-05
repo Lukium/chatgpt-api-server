@@ -2,3 +2,5 @@ flask[async]
 waitress
 openai
 tiktoken
+markdown
+pygments

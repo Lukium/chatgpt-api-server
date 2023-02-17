@@ -1,6 +1,9 @@
+tls_client
 flask[async]
-waitress
-openai
-tiktoken
+Flask-WTF
+Flask-Bootstrap4
+uvicorn
+asgiref
 markdown
 pygments
+undetected_chromedriver

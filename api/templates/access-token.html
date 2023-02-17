@@ -1,0 +1,37 @@
+{% extends 'bootstrap/base.html' %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block styles %}
+{{ super() }}
+  <style>
+		body { background: #e8f1f9; }
+    h1 { text-align: center;}
+	</style>
+{% endblock %}
+
+
+{% block title %}
+Lukium Swarm - ChatGPT API
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-10 col-lg-8 mx-lg-auto mx-md-auto">
+
+      <h1 class="pt-5 pb-2">Lukium Swarm - ChatGPT API</h1>
+
+      <p class="lead">Please enter your ChatGPT Email and Password below to retrieve your access token</p>
+      <p class="pt-5"><strong>{{ message }}</strong></p>
+
+      {{ wtf.quick_form(form) }}
+
+      
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

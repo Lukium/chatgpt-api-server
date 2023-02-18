@@ -52,4 +52,11 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 
 	`user_plus`: (`true` | `false`, default: `false`) Whether the account linked to the access_token has access to chatgpt Plus or not. Will determine which model to use, which may throw an exception if set to true when the user does not have access to to Plus
 
+	### Credits:
+	https://github.com/acheong08/OpenAIAuth OpenAIAuth - several modifications have been made to add functionality to the API
+	https://github.com/acheong08/ChatGPT-Proxy - Basic information on how to process prompts to chatgpt
+	https://github.com/jgaa/shinysocks - Basic Windows Proxy server
+
+
+
 	

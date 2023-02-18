@@ -17,8 +17,8 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 
 	`"default_proxy"` `string` is the default proxy to be used, and should be a valid socks5 string like `socks5://127.0.0.1:1080`
 
-		Included in the folder /shinysocks is a basic windows socks5 server (see credits for more info)
-		If running in linux, I recommend using `minisocks`
+	Included in the folder /shinysocks is a basic windows socks5 server (see credits for more info)
+	If running in linux, I recommend using `minisocks`
 
 	`"wan_url"` `string` is the url the API will be accessible through if one has been setup (in dev)
 
@@ -49,7 +49,7 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 	`pretty`: (`true` | `false`, default: `true` on browser, `false` on `/api`) Only effective if `reply_only` = `true` Will determine whether to run the reply through markdown for better looking reply, especially useful for when using the API via the browser
 
 	`access_token`: (`OpenAI Access Token`, default: None) When passed, the API will create an instance of the `ChatGPT` class specifically using the access token to make a chatgpt request using the account associated with the access token rather than one of the accounts setup in `settings.json`. Access tokens can be retrieved using the `/access-token` or `/api/access-token` endpoints.
-	
+
 	`user_plus`: (`true` | `false`, default: `false`) Whether the account linked to the access_token has access to chatgpt Plus or not. Will determine which model to use, which may throw an exception if set to true when the user does not have access to to Plus
 
 	

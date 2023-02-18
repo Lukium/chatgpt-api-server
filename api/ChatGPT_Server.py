@@ -9,11 +9,7 @@ from flask import request
 from flask import render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
 
-#IMPORT CONTRIBUTED-CODE LIBRARIES
-from contrib.OpenAIAuth.OpenAIAuth import OpenAIAuth
-
 #IMPORT CLASSES
-from classes.ChatGPT import ChatGPT
 from classes.ChatGPTServer import ChatGPTServer
 
 #IMPORT FORMS
@@ -30,7 +26,7 @@ from helpers.APIUsers import add #For adding users to the API
 
 #SETUP FLASK APP
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'sCvsNG6Uc9yIShtSyh1EiL9j2BwbR9Wt'
+app.config['SECRET_KEY'] = Settings.API_APP_SECRET
 Bootstrap(app)
 
 ChatGPTServer = asyncio.run(ChatGPTServer.create())

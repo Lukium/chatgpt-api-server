@@ -1,5 +1,4 @@
 #IMPORT BUILT-IN LIBRARIES
-import asyncio
 import json
 
 #IMPORT THIRD-PARTY LIBRARIES
@@ -38,7 +37,6 @@ class ChatGPTServer:
         await self.__load_chatgpt_instances()
         return self
 
-
     #SETUP CHATGPT INSTANCES
     async def __load_chatgpt_instances(self) -> list:
         openai_instances = self.settings['openai']['instances']
@@ -70,24 +68,6 @@ class ChatGPTServer:
             if self.current_chatgpt_plus >= len(self.chatgpt_plus_instances):
                 self.current_chatgpt_plus = 0
         return chatgpt
-
-    """
-    async def get_chatgpt_free(chatgpt_instances: list):    
-        global current_chatgpt_free
-        chatgpt = chatgpt_instances[current_chatgpt_free]
-        current_chatgpt_free += 1
-        if current_chatgpt_free >= len(chatgpt_instances):
-            current_chatgpt_free = 0
-        return chatgpt
-
-    async def get_chatgpt_plus(chatgpt_instances: list):    
-        global current_chatgpt_plus
-        chatgpt = chatgpt_instances[current_chatgpt_plus]
-        current_chatgpt_plus += 1
-        if current_chatgpt_plus >= len(chatgpt_instances):
-            current_chatgpt_plus = 0
-        return chatgpt
-    """
     
     async def chatgpt_instances_cloudflare_refresh():
         Settings.refresh_cloudflare()
@@ -141,7 +121,6 @@ class ChatGPTServer:
         type: str = kwargs.get('type', 'builtin')
         access_token: str = kwargs.get('access_token', None)
         user_plus: str = kwargs.get('user_plus', 'false')
-        #API_KEYS = Settings.API_KEYS
         response: dict = {}
 
         if type == 'user':

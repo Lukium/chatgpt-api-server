@@ -32,6 +32,9 @@ if not json_key_exists(settings, 'api_server', 'readonly_api_key'):             
 if not json_key_exists(settings, 'api_server', 'readwrite_api_key'):                #if readwrite_api_key is not present in settings.json
     add_json_key(settings, generate_api_key(), 'api_server', 'readwrite_api_key')   #add readwrite_api_key to settings.json
     update_settings = True
+if not json_key_exists(settings, 'api_server', 'app_secret'):                    #if admin_api_key is not present in settings.json
+    add_json_key(settings, generate_api_key(), 'api_server', 'app_secret')       #add admin_api_key to settings.json
+    update_settings = True
 if update_settings:
     with open('./settings.json', 'w') as f:
         json.dump(settings, f, indent=4)
@@ -44,6 +47,7 @@ API_ADMIN_KEY = settings['api_server']['admin_api_key']
 API_READONLY_KEY = settings['api_server']['readonly_api_key']
 API_READWRITE_KEY = settings['api_server']['readwrite_api_key']
 API_DEFAULT_PROXY = settings['api_server']['default_proxy']
+API_APP_SECRET = settings['api_server']['app_secret']
 
 API_CF_CLEARANCE, API_USER_AGENT = Cloudflare(proxy=API_DEFAULT_PROXY).get_cf_cookies()
 

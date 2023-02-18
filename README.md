@@ -54,7 +54,9 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 
 	### Credits:
 	https://github.com/acheong08/OpenAIAuth OpenAIAuth - several modifications have been made to add functionality to the API
+
 	https://github.com/acheong08/ChatGPT-Proxy - Basic information on how to process prompts to chatgpt
+	
 	https://github.com/jgaa/shinysocks - Basic Windows Proxy server
 
 

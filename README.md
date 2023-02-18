@@ -18,7 +18,7 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 	`"default_proxy"` `string` is the default proxy to be used, and should be a valid socks5 string like `socks5://127.0.0.1:1080`
 
 	Included in the folder /shinysocks is a basic windows socks5 server (see credits for more info)
-	If running in linux, I recommend using `minisocks`
+	If running in linux, I recommend using `microsocks` `https://github.com/rofl0r/microsocks`
 
 	`"wan_url"` `string` is the url the API will be accessible through if one has been setup (in dev)
 

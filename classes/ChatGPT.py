@@ -285,11 +285,9 @@ class ChatGPT:
         else:
             request_body["parent_message_id"] = ""
 
-        print(f'Request Body: {json.dumps(request_body, indent=4)}\n\n')
         start_time = datetime.now() #Start counting time
 
         response = await self.__chatgpt_post(request_body=request_body)
-        #print(f'Response: {response.text}')
 
         response_status = await self.__response_check(response.text)
         if response_status[0] == 'error':
@@ -319,7 +317,6 @@ class ChatGPT:
         if conversation_id == "" or conversation_id is None: #Only generate title if conversation_id is not provided, which means it's a new conversation
             response['conversation_title'] = await self.__gen_title(conversation_id=response['conversation_id'], message_id=response['message']['id'])
 
-
         #ATTACH USER'S USERNAME TO RESPONSE
         response['api_user'] = Settings.API_KEYS[user]['username']
         
@@ -334,42 +331,9 @@ class ChatGPT:
         response['api_instance_identity'] = self.identity #Add instance identity to response object
 
         if 'status' not in response:
-            response['status'] = 'success'
-        
-        #if response['status'] == 'success':
-        #    await self.__store_conversation(user=user, response=response) #Store conversation in database        
+            response['status'] = 'success'     
 
         return response
-    
-    async def __store_conversation(self, **kwargs) -> None:
-        user: str = kwargs.get("user")
-        response: dict = kwargs.get("response")
-        user_id: str = Settings.API_KEYS[user]['user_id']
-        conversation_id: str = response['conversation_id']
-        message_id: str = response['message']['id']
-
-        #Build conversation data
-        data = {
-            'prompt': response['api_prompt'],            
-            'reply': response['message']['content']['parts'][0],
-            'origin_time':  response['api_prompt_time_origin'],
-            'conversation_message_index': response['conversation_message_index']
-        }
-
-        with open('conversations.json', 'r') as f:
-            conversations = json.load(f)
-        if user_id not in conversations['users']:
-            add_json_key(conversations['users'], {'username': Settings.API_KEYS[user]['username'], 'conversations': {}}, user_id)
-            
-        if conversation_id not in conversations['users'][user_id]['conversations']:            
-            add_json_key(conversations['users'][user_id]['conversations'], {'title': response['conversation_title'], 'api_instance_type': self.type, 'api_instance': self.identity, 'messages': {}}, conversation_id)
-
-        if message_id not in conversations['users'][user_id]['conversations'][conversation_id]['messages']:
-            add_json_key(conversations['users'][user_id]['conversations'][conversation_id]['messages'], data, message_id)
-
-        with open('conversations.json', 'w') as f:
-            json.dump(conversations, f, indent=4)
-
     
     async def __gen_title(self, **kwargs):
         conversation_id = kwargs.get('conversation_id')

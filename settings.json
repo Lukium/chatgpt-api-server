@@ -17,8 +17,6 @@
         "host": "192.168.1.1",
         "port": 5000,
         "default_proxy": "socks5://127.0.0.1:1080",
-        "wan_url": "",
-        "local_or_wan": "wan",
         "terminal_name": "ChatGPT-API-Server",
         "endpoints": {
             "browser": {

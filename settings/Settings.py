@@ -62,17 +62,7 @@ if update_settings:
     with open('./settings.json', 'r') as f:
         settings = json.load(f)
 
-API_LOCAL_OR_WAN = settings['api_server']['local_or_wan']
-API_WAN_URL = settings['api_server']['wan_url']
-API_ADMIN_KEY = settings['api_server']['admin_api_key']
-API_READONLY_KEY = settings['api_server']['readonly_api_key']
-API_READWRITE_KEY = settings['api_server']['readwrite_api_key']
-API_DEFAULT_PROXY = settings['api_server']['default_proxy']
-API_APP_SECRET = settings['api_server']['app_secret']
-
-API_CF_CLEARANCE, API_USER_AGENT = Cloudflare(proxy=API_DEFAULT_PROXY).get_cf_cookies()
-
-#SETUP OPENAI DEFAULTS
+#SETUP OPENAI API DEFAULTS
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL") or str(settings['openai']['base_url'])
 OPENAI_ENDPOINT_CONVERSATION = os.environ.get("OPENAI_CONVERSATION_ENDPOINT") or str(settings['openai']['endpoints']['conversation'])
 OPENAI_ENDPOINT_GEN_TITLE = os.environ.get("OPENAI_GEN_TITLE_ENDPOINT") or str(settings['openai']['endpoints']['gen_title'])
@@ -83,6 +73,12 @@ OPENAI_BASE_PROMPT = (
 )
 
 #SETUP API DEFAULTS
+API_ADMIN_KEY = settings['api_server']['admin_api_key']
+API_READONLY_KEY = settings['api_server']['readonly_api_key']
+API_READWRITE_KEY = settings['api_server']['readwrite_api_key']
+API_DEFAULT_PROXY = settings['api_server']['default_proxy']
+API_APP_SECRET = settings['api_server']['app_secret']
+API_CF_CLEARANCE, API_USER_AGENT = Cloudflare(proxy=API_DEFAULT_PROXY).get_cf_cookies()
 API_HOST = os.environ.get("API_HOST") or str(settings['api_server']['host'])
 API_PORT = os.environ.get("API_PORT") or int(settings['api_server']['port'])
 API_LOCAL_BASE_URL = f'http://{API_HOST}:{API_PORT}'

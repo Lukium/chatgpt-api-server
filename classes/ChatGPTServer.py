@@ -47,6 +47,7 @@ class ChatGPTServer:
     #SETUP CHATGPT INSTANCES
     async def __load_chatgpt_instances(self) -> list:
         openai_instances = self.settings['openai']['instances']
+        #cf_clearance, user_agent = await first_cloudflare()
         self.chatgpt_instances = [await ChatGPT.create(instance=openai_instances.index(instance), cf_clearance=Settings.API_CF_CLEARANCE, user_agent=Settings.API_USER_AGENT) for instance in openai_instances]
         if len(self.chatgpt_instances) == 0:
             raise Exception('No OpenAI instances were found in settings.json')
@@ -144,11 +145,6 @@ class ChatGPTServer:
                                                 user_plus=user_plus,
                                                 user=user
                                                     )
-        print(f'ChatGPT Instance: {chatgpt.instance}')
-        print(f'ChatGPT Access Token: {chatgpt.access_token}')
-        print(f'ChatGPT cf clearance {chatgpt.cf_clearance}')
-        print(f'ChatGPT User Agent: {chatgpt.user_agent}')
-        print(f'ChatGPT Plus: {chatgpt.plus}')
         return chatgpt
     
     async def __store_conversation(self, **kwargs) -> None:
@@ -288,9 +284,6 @@ class ChatGPTServer:
                     response['status'] = 'error'
                     response['message'] = 'Conversation found, but the previously used API Instance was not found. Please try again.'
                     return response
-                else:
-                    print(f'Using ChatGPT Instance: {chatgpt.email}')
-                    print(f'ChatGPT Plus? {chatgpt.plus}')
             elif type == 'user':
                 chatgpt: ChatGPT = await self.__spawn_user_chatgpt(user=user, access_token=access_token, user_plus=user_plus)
                 
@@ -305,8 +298,6 @@ class ChatGPTServer:
                     chatgpt: ChatGPT = await self.__get_chatgpt(type='free')                
                 elif plus == "true":
                     chatgpt: ChatGPT = await self.__get_chatgpt(type='plus')
-                print(f'Using ChatGPT Instance: {chatgpt.email}')
-                print(f'ChatGPT Plus? {chatgpt.plus}')
 
         response: dict = await chatgpt.ask(user=user, prompt=prompt, conversation_id=conversation_id, parent_message_id=parent_message_id)        
 
@@ -317,8 +308,6 @@ class ChatGPTServer:
             response['last_message_reply'] = last_message_reply
         else:
             response['conversation_message_index'] = 0
-
-        print(f'Response: {json.dumps(response, indent=4, sort_keys=True)}')
 
         if response['status'] == 'success':
             await self.__store_conversation(user=user, response=response) #Store conversation in database
@@ -350,6 +339,7 @@ class ChatGPTServer:
                         
         if well_formed_response:
             return "Error: Malformed response"
+
     
     async def __reload_users(self):
         """

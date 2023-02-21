@@ -73,8 +73,6 @@ API_APP_SECRET = settings['api_server']['app_secret']
 API_CF_CLEARANCE, API_USER_AGENT = Cloudflare(proxy=API_DEFAULT_PROXY).get_cf_cookies()
 
 #SETUP OPENAI DEFAULTS
-#OPENAI_DEFAULT_TEMPERATURE = os.environ.get("OPENAI_TEMPERATURE") or float(settings['openai']['default_temperature'])
-#OPENAI_DEFAULT_MAX_TOKENS = os.environ.get("OPENAI_MAX_TOKENS") or int(settings['openai']['default_max_tokens'])
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL") or str(settings['openai']['base_url'])
 OPENAI_ENDPOINT_CONVERSATION = os.environ.get("OPENAI_CONVERSATION_ENDPOINT") or str(settings['openai']['endpoints']['conversation'])
 OPENAI_ENDPOINT_GEN_TITLE = os.environ.get("OPENAI_GEN_TITLE_ENDPOINT") or str(settings['openai']['endpoints']['gen_title'])
@@ -83,7 +81,6 @@ OPENAI_BASE_PROMPT = (
     f'User: Hello\n'
     f'ChatGPT: Hello! How can I help you today? <|im_end|>\n\n\n'
 )
-
 
 #SETUP API DEFAULTS
 API_HOST = os.environ.get("API_HOST") or str(settings['api_server']['host'])

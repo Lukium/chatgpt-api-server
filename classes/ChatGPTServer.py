@@ -47,7 +47,6 @@ class ChatGPTServer:
     #SETUP CHATGPT INSTANCES
     async def __load_chatgpt_instances(self) -> list:
         openai_instances = self.settings['openai']['instances']
-        #cf_clearance, user_agent = await first_cloudflare()
         self.chatgpt_instances = [await ChatGPT.create(instance=openai_instances.index(instance), cf_clearance=Settings.API_CF_CLEARANCE, user_agent=Settings.API_USER_AGENT) for instance in openai_instances]
         if len(self.chatgpt_instances) == 0:
             raise Exception('No OpenAI instances were found in settings.json')
@@ -173,7 +172,6 @@ class ChatGPTServer:
             add_json_key(conversations['users'], {'username': Settings.API_KEYS[user]['username'], 'conversations': {}}, user_id)
             
         if conversation_id not in conversations['users'][user_id]['conversations']:
-            #add_json_key(conversations['users'][user_id]['conversations'], {'title': response['conversation_title'], 'messages': {message_id: {'prompt': response['api_prompt'], 'origin_time':  response['api_prompt_time_origin'], 'reply': response['message']['content']['parts'][0]}}}, conversation_id)
             add_json_key(conversations['users'][user_id]['conversations'], {'title': response['conversation_title'], 'api_instance_type': response['api_instance_type'], 'api_instance': response['api_instance_identity'], 'messages': {}}, conversation_id)
 
         if message_id not in conversations['users'][user_id]['conversations'][conversation_id]['messages']:
@@ -274,8 +272,6 @@ class ChatGPTServer:
             conversation_message_index = conversation_length #Get index of next message based on length of conversation
             conversation_messages: list = list(conversation['messages'].keys()) #Get list of all messages in conversation
             conversation_last_message_id = max(conversation_messages, key=lambda k: self.conversations[user_id]['conversations'][conversation_id]['messages'][k]['conversation_message_index']) #Get last message key based on message index of each message in conversation
-            #conversation_last_message_index = conversation['messages'][conversation_last_message_key]['conversation_message_index'] #Get last message index based on last message key
-            #conversation_last_message_id = next((x for x in conversation['messages'] if x['conversation_message_index'] == conversation_last_message_index), None) #Get last message id based on last message index            
             if conversation_last_message_id != parent_message_id:
                 response['status'] = 'error'
                 response['message'] = 'Parent message id does not match the last message id in the conversation. Please try again with the last message id or start a new conversation.'
@@ -354,7 +350,6 @@ class ChatGPTServer:
                         
         if well_formed_response:
             return "Error: Malformed response"
-
     
     async def __reload_users(self):
         """

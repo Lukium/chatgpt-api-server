@@ -361,8 +361,7 @@ class ChatGPT:
         if user_id not in conversations['users']:
             add_json_key(conversations['users'], {'username': Settings.API_KEYS[user]['username'], 'conversations': {}}, user_id)
             
-        if conversation_id not in conversations['users'][user_id]['conversations']:
-            #add_json_key(conversations['users'][user_id]['conversations'], {'title': response['conversation_title'], 'messages': {message_id: {'prompt': response['api_prompt'], 'origin_time':  response['api_prompt_time_origin'], 'reply': response['message']['content']['parts'][0]}}}, conversation_id)
+        if conversation_id not in conversations['users'][user_id]['conversations']:            
             add_json_key(conversations['users'][user_id]['conversations'], {'title': response['conversation_title'], 'api_instance_type': self.type, 'api_instance': self.identity, 'messages': {}}, conversation_id)
 
         if message_id not in conversations['users'][user_id]['conversations'][conversation_id]['messages']:

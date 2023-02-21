@@ -1,9 +1,10 @@
 #IMPORT SETTINGS
 import settings.Settings as Settings
 
+#IMPORT SERVER APP
 from api.ChatGPT_Server import app
 
-if __name__ == "__main__":
+if __name__ == '__main__':   
     #FLASK ONLY IMPLEMENATION
     #app.run(host=Settings.API_HOST, port=Settings.API_PORT, threaded=True)
     
@@ -25,15 +26,11 @@ if __name__ == "__main__":
     #pip install uvicorn asgiref    
     import uvicorn
     from asgiref.wsgi import WsgiToAsgi
-    #app = WsgiToAsgi(app) #IF USING workers=Settings.API_WORKERS,
     uvicorn.run(
-        WsgiToAsgi(app), #IF NOT USING workers=Settings.API_WORKERS,
-        #"app:app", #IF USING workers=Settings.API_WORKERS,
+        WsgiToAsgi(app),
         host=Settings.API_HOST,
         port=Settings.API_PORT,
         limit_concurrency = None,
-        #loop="uvloop", #uvloop not supported on Windows
-        #workers=Settings.API_WORKERS, #Seems to spawn multiple instances of the app
         server_header=False
     )    
 

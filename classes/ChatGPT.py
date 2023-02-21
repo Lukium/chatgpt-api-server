@@ -10,10 +10,11 @@ import tls_client
 from contrib.OpenAIAuth.OpenAIAuth import OpenAIAuth
 from contrib.OpenAIAuth.Cloudflare import Cloudflare
 
-
+#IMPORT SETTINGS
 import settings.Settings as Settings
 
-from helpers.General import is_valid_socks5_url
+#IMPORT HELPERS
+from helpers.General import is_valid_socks5_url, json_key_exists, add_json_key
 
 class ChatGPT:
     def __init__(self, **kwargs) -> None:
@@ -23,7 +24,8 @@ class ChatGPT:
         self.type = kwargs.get('type', 'builtin')
         self.user_access_token = kwargs.get('user_access_token', None)
         self.user_plus = kwargs.get('user_plus', 'false')
-        
+        self.user = kwargs.get('user', None)
+        self.identity = ""        
         self.session = tls_client.Session(client_identifier='chrome_108')
     
     @classmethod
@@ -34,8 +36,9 @@ class ChatGPT:
         type = kwargs.get('type', 'builtin')
         user_access_token = kwargs.get('user_access_token', None)
         user_plus = kwargs.get('user_plus', 'false')
+        user = kwargs.get('user', None)
         
-        self = cls(instance=instance, cf_clearance=cf_clearance, user_agent=user_agent, type=type, user_access_token=user_access_token, user_plus=user_plus)
+        self = cls(instance=instance, cf_clearance=cf_clearance, user_agent=user_agent, type=type, user_access_token=user_access_token, user_plus=user_plus, user=user)
         
         if type == 'builtin':
             await self.__configure()
@@ -69,6 +72,9 @@ class ChatGPT:
                 self.session.proxies.update(proxies)
         #Make sure whether the instance has a plus account or not and set the attribute        
         self.plus = self.user_plus
+
+        #Use the user's APU key as identity
+        self.identity = self.user
 
     
     async def __configure(self):
@@ -122,6 +128,9 @@ class ChatGPT:
                 self.plus = instance_settings.get("plus")
         else:
             raise Exception(f'No "plus" attribute was found for instance {self.instance} in settings.json, please add it and set it to either true or false')
+        
+        #User email as identity for builtin accounts
+        self.identity = self.email
 
     async def __refresh(self):
         """
@@ -213,9 +222,18 @@ class ChatGPT:
         await self.cloudflare()
         await self.__refresh()
 
-    async def __chatgpt_post(self, request_body: dict):
+    async def __chatgpt_post(self, **kwargs):
+        request_body: dict = kwargs.get("request_body")
+        endpoint: str = kwargs.get("endpoint", "conversation")
+        conversation_id: str = kwargs.get("conversation_id", None)
+        base_url: str = Settings.OPENAI_BASE_URL
+        if endpoint == "conversation":
+            url_endpoint = Settings.OPENAI_ENDPOINT_CONVERSATION
+        elif endpoint == "get_title":
+            url_endpoint = f'{Settings.OPENAI_ENDPOINT_GEN_TITLE}/{conversation_id}'
+        url = f'{base_url}{url_endpoint}'
         response = self.session.post(
-        url = "https://chat.openai.com/backend-api/conversation",
+        url = url,
         headers = self.session.headers,
         cookies = self.session.cookies,
         data = json.dumps(request_body),
@@ -223,7 +241,12 @@ class ChatGPT:
         )
         return response
      
-    async def ask(self, prompt: str = None, turbo: bool = False):
+    async def ask(self, **kwargs):
+        user: str = kwargs.get("user")
+        prompt: str = kwargs.get("prompt")
+        conversation_id: str = kwargs.get("conversation_id", "")
+        parent_message_id: str = kwargs.get("parent_message_id", "")
+        turbo: bool = kwargs.get("turbo")
 
         message_id = str(uuid.uuid4())
         prompt = prompt
@@ -249,43 +272,116 @@ class ChatGPT:
                 }
             }
         ],
-        "parent_message_id": "",
-        "model": model
+        "model": model,
+        "user": user
     }
         
+        #Only append conversation_id if it is not empty
+        if conversation_id != "" and conversation_id is not None:
+            request_body["conversation_id"] = conversation_id
+        
+        if parent_message_id != "" and parent_message_id is not None:
+            request_body["parent_message_id"] = parent_message_id
+        else:
+            request_body["parent_message_id"] = ""
+
+        print(f'Request Body: {json.dumps(request_body, indent=4)}\n\n')
         start_time = datetime.now() #Start counting time
 
-        response = await self.__chatgpt_post(request_body)
+        response = await self.__chatgpt_post(request_body=request_body)
+        #print(f'Response: {response.text}')
 
         response_status = await self.__response_check(response.text)
-        if response_status[0] == "error":
+        if response_status[0] == 'error':
             response: dict = {}
-            if response_status[1] == "Cookies Expired, run refresh_cloudflare()":
+            if response_status[1] == 'Cookies Expired, run refresh_cloudflare()':
                 await self.refresh_cloudflare()
                 if self.type == 'user':
                     await self.__refresh()
-                response = await self.__chatgpt_post(request_body)
+                response = await self.__chatgpt_post(request_body=request_body)
                 response_status = await self.__response_check(response.text)
-                if response_status[0] == "error":
-                    if response_status[1] == "Cookies Expired, run refresh_cloudflare()":
-                        response["status"] = response_status[0]
-                        response["message"] = 'Cookies appear to be expired even after refreshing them. Please contact Admin.'
+                if response_status[0] == 'error':
+                    if response_status[1] == 'Cookies Expired, run refresh_cloudflare()':
+                        response['status'] = response_status[0]
+                        response['message'] = 'Cookies appear to be expired even after refreshing them. Please contact Admin.'
             else:
-                response["status"] = response_status[0]
-                response["message"] = response_status[1]
+                response['status'] = response_status[0]
+                response['message'] = response_status[1]
         else:
-            step_1 = str(response.text).replace("data: [DONE]","").strip() # Remove the "data: [DONE]" from the response as well as leading and trailing whitespace
+            step_1 = str(response.text).replace('data: [DONE]','').strip() # Remove the "data: [DONE]" from the response as well as leading and trailing whitespace
             step_2 = step_1.rfind('data: {"message": {"id": "') # Find the last occurance of the string (data: {"message": {"id": ") in the response
             step_3 = (step_1[step_2:]).strip() # Slice the response from the last occurance of the string (data: {"message": {"id": ") to the end of the response and remove leading and trailing whitespace
             step_4 = step_3.find(' ') # Find the first occurance of a space in the response
             step_5 = (step_3[step_4:]).strip() # Slice the response from the beginning of the response to the first occurance of a space and remove leading and trailing whitespace
-            response = json.loads(step_5) # Convert the response to a dictionary
+            response = json.loads(step_5) # Convert the response to a dictionary        
+
+        #GENERATE RESPONSE TITLE
+        if conversation_id == "" or conversation_id is None: #Only generate title if conversation_id is not provided, which means it's a new conversation
+            response['conversation_title'] = await self.__gen_title(conversation_id=response['conversation_id'], message_id=response['message']['id'])
+
+
+        #ATTACH USER'S USERNAME TO RESPONSE
+        response['api_user'] = Settings.API_KEYS[user]['username']
         
         end_time = datetime.now() #Start counting time
         response_time = str(round((end_time - start_time).total_seconds(), 2)) #Calculate time difference
         
-        response["response_time_taken"] = response_time #Add response time to response object
-        response['prompt_time_origin'] = start_time.strftime("%Y-%m-%d | %H:%M:%S")
-        response["prompt"] = prompt #Add prompt to response object
+        response['api_response_time_taken'] = response_time #Add response time to response object
+        response['api_prompt_time_origin_readable'] = start_time.strftime('%Y-%m-%d | %H:%M:%S')
+        response['api_prompt_time_origin'] = str(start_time)
+        response['api_prompt'] = prompt #Add prompt to response object
+        response['api_instance_type'] = self.type #Add instance type to response object
+        response['api_instance_identity'] = self.identity #Add instance identity to response object
+
+        if 'status' not in response:
+            response['status'] = 'success'
+        
+        #if response['status'] == 'success':
+        #    await self.__store_conversation(user=user, response=response) #Store conversation in database        
 
         return response
+    
+    async def __store_conversation(self, **kwargs) -> None:
+        user: str = kwargs.get("user")
+        response: dict = kwargs.get("response")
+        user_id: str = Settings.API_KEYS[user]['user_id']
+        conversation_id: str = response['conversation_id']
+        message_id: str = response['message']['id']
+
+        #Build conversation data
+        data = {
+            'prompt': response['api_prompt'],            
+            'reply': response['message']['content']['parts'][0],
+            'origin_time':  response['api_prompt_time_origin'],
+            'conversation_message_index': response['conversation_message_index']
+        }
+
+        with open('conversations.json', 'r') as f:
+            conversations = json.load(f)
+        if user_id not in conversations['users']:
+            add_json_key(conversations['users'], {'username': Settings.API_KEYS[user]['username'], 'conversations': {}}, user_id)
+            
+        if conversation_id not in conversations['users'][user_id]['conversations']:
+            #add_json_key(conversations['users'][user_id]['conversations'], {'title': response['conversation_title'], 'messages': {message_id: {'prompt': response['api_prompt'], 'origin_time':  response['api_prompt_time_origin'], 'reply': response['message']['content']['parts'][0]}}}, conversation_id)
+            add_json_key(conversations['users'][user_id]['conversations'], {'title': response['conversation_title'], 'api_instance_type': self.type, 'api_instance': self.identity, 'messages': {}}, conversation_id)
+
+        if message_id not in conversations['users'][user_id]['conversations'][conversation_id]['messages']:
+            add_json_key(conversations['users'][user_id]['conversations'][conversation_id]['messages'], data, message_id)
+
+        with open('conversations.json', 'w') as f:
+            json.dump(conversations, f, indent=4)
+
+    
+    async def __gen_title(self, **kwargs):
+        conversation_id = kwargs.get('conversation_id')
+        message_id = kwargs.get('message_id')
+        request_body = {
+            "message_id": message_id,
+            "model": "text-davinci-002-render"
+        }
+        response = json.loads((await self.__chatgpt_post(request_body=request_body, endpoint="get_title", conversation_id=conversation_id)).text)
+        if 'title' in response:
+            return response['title']
+        else:
+            return 'Error Generating Title'
+        

@@ -6,13 +6,46 @@
                 "password": "",
                 "plus": true
             }
-        ]
+        ],
+        "base_url": "https://chat.openai.com",
+        "endpoints":{
+            "conversation": "/backend-api/conversation",
+            "gen_title": "/backend-api/conversation/gen_title"
+        }
     },
     "api_server": {
         "host": "192.168.1.1",
         "port": 5000,
         "default_proxy": "socks5://127.0.0.1:1080",
         "wan_url": "",
-        "local_or_wan": "wan"
+        "local_or_wan": "wan",
+        "terminal_name": "ChatGPT-API-Server",
+        "endpoints": {
+            "browser": {
+                "chatgpt": {
+                    "url": "/chat"
+                },
+                "chatrecall": {
+                    "url": "/recall"
+                },
+                "access_token": {
+                    "url": "/access-token"
+                },
+                "add_user": {
+                    "url": "/admin/add-user"
+                }
+            },
+            "api": {
+                "chatgpt": {
+                    "url": "/api/chat"
+                },
+                "chatrecall": {
+                    "url": "/api/recall"
+                },
+                "access_token": {
+                    "url": "/api/access-token"
+                }
+            }
+        }
     }
 }

@@ -2,8 +2,6 @@ tls_client
 flask[async]
 Flask-WTF
 Flask-Bootstrap4
-uvicorn
-asgiref
 markdown
 pygments
 undetected_chromedriver

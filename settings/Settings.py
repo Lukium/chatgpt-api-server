@@ -1,5 +1,5 @@
 #IMPORT BUILT-IN LIBRARIES
-from datetime import date
+from datetime import date, datetime
 import json
 import os
 import platform
@@ -18,12 +18,6 @@ else:
     os.system(f'echo -e "\033]0;{API_TERMINAL_NAME}\007"')
 
 #CONTINUE IMPORTS
-
-#IMPORT CONTRIBUTED-CODE LIBRARIES
-from contrib.OpenAIAuth.Cloudflare import Cloudflare
-
-#IMPORT CLASSES
-from classes.ChatGPT import ChatGPT
 
 #IMPORT HELPER FUNCTIONS
 from helpers.General import generate_api_key, json_key_exists, add_json_key
@@ -72,13 +66,18 @@ OPENAI_BASE_PROMPT = (
     f'ChatGPT: Hello! How can I help you today? <|im_end|>\n\n\n'
 )
 
+#INITIALIZE CLOUDFLARE VARIABLES
+API_CF_CLEARANCE: str = None
+API_USER_AGENT: str = None
+API_LAST_CF_REFRESH: datetime = None
+
 #SETUP API DEFAULTS
 API_ADMIN_KEY = settings['api_server']['admin_api_key']
 API_READONLY_KEY = settings['api_server']['readonly_api_key']
 API_READWRITE_KEY = settings['api_server']['readwrite_api_key']
 API_DEFAULT_PROXY = settings['api_server']['default_proxy']
 API_APP_SECRET = settings['api_server']['app_secret']
-API_CF_CLEARANCE, API_USER_AGENT = Cloudflare(proxy=API_DEFAULT_PROXY).get_cf_cookies()
+API_CF_REFRESH_INTERVAL = settings['api_server']['cf_refresh_interval']
 API_HOST = os.environ.get("API_HOST") or str(settings['api_server']['host'])
 API_PORT = os.environ.get("API_PORT") or int(settings['api_server']['port'])
 API_LOCAL_BASE_URL = f'http://{API_HOST}:{API_PORT}'

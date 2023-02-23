@@ -18,6 +18,7 @@
         "port": 5000,
         "default_proxy": "socks5://127.0.0.1:1080",
         "terminal_name": "ChatGPT-API-Server",
+        "cf_refresh_interval": 600,
         "endpoints": {
             "browser": {
                 "chatgpt": {

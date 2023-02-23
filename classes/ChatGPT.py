@@ -14,13 +14,13 @@ from contrib.OpenAIAuth.Cloudflare import Cloudflare
 import settings.Settings as Settings
 
 #IMPORT HELPERS
-from helpers.General import is_valid_socks5_url, json_key_exists, add_json_key
+from helpers.General import is_valid_socks5_url
 
 class ChatGPT:
     def __init__(self, **kwargs) -> None:
         self.instance = kwargs.get('instance')
-        self.cf_clearance = kwargs.get('cf_clearance')
-        self.user_agent = kwargs.get('user_agent')
+        self.cf_clearance = None
+        self.user_agent = None
         self.type = kwargs.get('type', 'builtin')
         self.user_access_token = kwargs.get('user_access_token', None)
         self.user_plus = kwargs.get('user_plus', 'false')
@@ -31,21 +31,19 @@ class ChatGPT:
     @classmethod
     async def create(cls, **kwargs):
         instance = kwargs.get('instance')
-        cf_clearance = kwargs.get('cf_clearance')
-        user_agent = kwargs.get('user_agent')
         type = kwargs.get('type', 'builtin')
         user_access_token = kwargs.get('user_access_token', None)
         user_plus = kwargs.get('user_plus', 'false')
         user = kwargs.get('user', None)
         
-        self = cls(instance=instance, cf_clearance=cf_clearance, user_agent=user_agent, type=type, user_access_token=user_access_token, user_plus=user_plus, user=user)
+        self = cls(instance=instance, type=type, user_access_token=user_access_token, user_plus=user_plus, user=user)
         
         if type == 'builtin':
             await self.__configure()
+            print(f'Logging in with {self.identity}')
             await self.__login()
         elif type == 'user':
             await self.__configure_user()
-            await self.__refresh()
         return self
 
     async def __configure_user(self):
@@ -133,6 +131,8 @@ class ChatGPT:
         self.identity = self.email
 
     async def __refresh(self):
+        self.cf_clearance = Settings.API_CF_CLEARANCE
+        self.user_agent = Settings.API_USER_AGENT
         """
         Refreshes the session's cookies and headers with the latest available information from login()
         """
@@ -167,7 +167,7 @@ class ChatGPT:
         )
         await auth.begin()
         self.access_token = await auth.get_access_token()
-        self.session_token = await auth.get_session_token()
+        #self.session_token = await auth.get_session_token()
         await self.__refresh()
     
     async def __response_check(self, response_text: str):
@@ -242,6 +242,7 @@ class ChatGPT:
         return response
      
     async def ask(self, **kwargs):
+        await self.__refresh()
         user: str = kwargs.get("user")
         prompt: str = kwargs.get("prompt")
         conversation_id: str = kwargs.get("conversation_id", "")
@@ -347,4 +348,3 @@ class ChatGPT:
             return response['title']
         else:
             return 'Error Generating Title'
-        

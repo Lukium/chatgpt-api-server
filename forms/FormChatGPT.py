@@ -6,7 +6,6 @@ class FormChatGPT(FlaskForm):
     api_key = StringField('Lukium Swarm API Key', validators=[DataRequired()], description=f'OVERRIDEN IF PASSED VIA URL [user=] . Lukium Swarm API Key, NOT OpeanAI API Key')    
     prompt = TextAreaField('Prompt', validators=[DataRequired()])
     conversation_id = StringField('Conversation ID', description='OPTIONAL - Used to continue a conversation. If not provided, a new conversation will be started.')
-    parent_message_id = StringField('Parent Message ID', description='OPTIONAL but REQUIRED if Conversation ID is used - Used to continue a conversation. If not provided, a new conversation will be started.')    
     plus = SelectField(label='Use Plus or Free?', choices=[('any', 'First Available'), ('true', 'Plus Only'), ('false', 'Free Only')], default='false', description='Use Plus or Free (Plus only available for Premium+ Supporters)')
     reply_only = SelectField('Reply Only?', description='Get only the reply, not the full JSON response', choices=[('false', 'No'), ('true', 'Yes')], default='true')
     pretty = SelectField('Markdown Reply?', description='Ignored if "Reply Only" = "No" | Use markdown styling (prettier) for the response?', choices=[('false', 'No'), ('true', 'Yes')], default='true')    

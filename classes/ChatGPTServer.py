@@ -1,4 +1,6 @@
 #IMPORT BUILT-IN LIBRARIES
+#import asyncio
+from datetime import datetime
 import json
 
 #IMPORT THIRD-PARTY LIBRARIES
@@ -7,6 +9,7 @@ from markdown.extensions.codehilite import CodeHiliteExtension
 
 #IMPORT CONTRIBUTED-CODE LIBRARIES
 from contrib.OpenAIAuth.OpenAIAuth import OpenAIAuth
+from contrib.OpenAIAuth.Cloudflare import Cloudflare
 
 #IMPORT CLASSES
 from classes.ChatGPT import ChatGPT
@@ -32,7 +35,10 @@ class ChatGPTServer:
             self.settings = json.load(f)
 
     @classmethod
-    async def create(cls, **kwargs):
+    async def create(cls, **kwargs) -> 'ChatGPTServer':
+        """
+        Creates a new instance of the ChatGPTServer class asynchronously and returns it
+        """
         current_chatgpt_any = 0
         current_chatgpt_free = 0
         current_chatgpt_plus = 0
@@ -40,15 +46,18 @@ class ChatGPTServer:
             settings = json.load(f)
         self = cls(current_chatgpt_any=current_chatgpt_any, current_chatgpt_free=current_chatgpt_free, current_chatgpt_plus=current_chatgpt_plus, settings=settings)
         await self.__load_chatgpt_instances()
+        await self.__refresh_cloudflare()
         await self.__load_api_users()
-        await self.__load_conversations()
+        await self.__load_conversations()        
         return self
 
     #SETUP CHATGPT INSTANCES
-    async def __load_chatgpt_instances(self) -> list:
+    async def __load_chatgpt_instances(self) -> None:
+        """
+        Loads all ChatGPT instances from settings.json
+        """
         openai_instances = self.settings['openai']['instances']
-        #cf_clearance, user_agent = await first_cloudflare()
-        self.chatgpt_instances = [await ChatGPT.create(instance=openai_instances.index(instance), cf_clearance=Settings.API_CF_CLEARANCE, user_agent=Settings.API_USER_AGENT) for instance in openai_instances]
+        self.chatgpt_instances = [await ChatGPT.create(instance=openai_instances.index(instance)) for instance in openai_instances]
         if len(self.chatgpt_instances) == 0:
             raise Exception('No OpenAI instances were found in settings.json')
         self.chatgpt_free_instances = [instance for instance in self.chatgpt_instances if instance.plus == False]
@@ -57,17 +66,63 @@ class ChatGPTServer:
         print(f'ChatGPT Plus Instances Loaded: {len(self.chatgpt_plus_instances)}')
     
     async def __load_api_users(self) -> dict:
+        """
+        Loads all API users from users.json
+        """
         with open('./users.json', 'r') as f:
             users = (json.load(f))['API_KEYS']
         self.users = users
     
     async def __load_conversations(self) -> dict:
+        """
+        Loads all conversations from conversations.json
+        """
         with open('./conversations.json', 'r') as f:
             conversations = (json.load(f))['users']
         self.conversations = conversations
+    
+    async def __refresh_cloudflare(self) -> None:
+        """
+        Refreshes the Cloudflare Clearance and User Agent
+        """
+        current_time = datetime.now()
+        if Settings.API_LAST_CF_REFRESH is not None:
+            time_delta = (current_time - Settings.API_LAST_CF_REFRESH).total_seconds()
+            if time_delta > Settings.API_CF_REFRESH_INTERVAL:
+                refresh = True
+            else:
+                refresh = False
+        else:
+            refresh = True
+        if refresh:
+            print(f'Starting Cloudflare Refresh')
+            print(f'Current Cloudflare Clearance: {Settings.API_CF_CLEARANCE}')
+            print(f'Current User Agent: {Settings.API_USER_AGENT}')            
+            Settings.API_CF_CLEARANCE, Settings.API_USER_AGENT = await Cloudflare(proxy=Settings.API_DEFAULT_PROXY).a_get_cf_cookies()
+            Settings.API_LAST_CF_REFRESH = datetime.now()
+            print(f'New Cloudflare Clearance: {Settings.API_CF_CLEARANCE}')
+            print(f'New User Agent: {Settings.API_USER_AGENT}')
+            if len(self.chatgpt_instances) > 0:
+                for instance in self.chatgpt_instances:
+                    instance.cf_clearance = Settings.API_CF_CLEARANCE
+                    instance.user_agent = Settings.API_USER_AGENT
+            if len(self.chatgpt_free_instances) > 0:
+                for instance in self.chatgpt_free_instances:
+                    instance.cf_clearance = Settings.API_CF_CLEARANCE
+                    instance.user_agent = Settings.API_USER_AGENT
+            if len(self.chatgpt_plus_instances) > 0:
+                for instance in self.chatgpt_plus_instances:
+                    instance.cf_clearance = Settings.API_CF_CLEARANCE
+                    instance.user_agent = Settings.API_USER_AGENT
+        else:
+            print(f'Cloudflare Refresh Not Needed - Last Refresh: {Settings.API_LAST_CF_REFRESH} - Time Delta: {time_delta} - Interval: {Settings.API_CF_REFRESH_INTERVAL}')
+
 
     #SETUP HELPER FUNCTIONS
-    async def __get_chatgpt(self, **kwargs):
+    async def __get_chatgpt(self, **kwargs) -> ChatGPT:
+        """
+        Returns a ChatGPT instance based on the type of instance requested.
+        """
         type: str = kwargs.get('type', None)
         if type == 'any':
             chatgpt = self.chatgpt_instances[self.current_chatgpt_any]
@@ -85,21 +140,11 @@ class ChatGPTServer:
             if self.current_chatgpt_plus >= len(self.chatgpt_plus_instances):
                 self.current_chatgpt_plus = 0
         return chatgpt
-    
-    async def chatgpt_instances_cloudflare_refresh():
-        Settings.refresh_cloudflare()
-        for instance in Settings.chatgpt_instances:
-            instance.cf_clearance = Settings.API_CF_CLEARANCE
-            instance.user_agent = Settings.API_USER_AGENT
-        for instance in Settings.chatgpt_free_instances:
-            instance.cf_clearance = Settings.API_CF_CLEARANCE
-            instance.user_agent = Settings.API_USER_AGENT
-        for instance in Settings.chatgpt_plus_instances:
-            instance.cf_clearance = Settings.API_CF_CLEARANCE
-            instance.user_agent = Settings.API_USER_AGENT
-        return
 
     async def check_user(self, **kwargs) -> dict:
+        """
+        Check if a user is valid
+        """
         user = kwargs.get('user', None)
         API_KEYS = Settings.API_KEYS
         response: dict = {}
@@ -120,6 +165,9 @@ class ChatGPTServer:
         return response
 
     async def retrieve_access_token(self, **kwargs) -> str:
+        """
+        Retrieve an access token for a user
+        """
         email = kwargs.get('email', None)
         password = kwargs.get('password', None)
         auth = OpenAIAuth(
@@ -133,6 +181,9 @@ class ChatGPTServer:
         return access_token
     
     async def __spawn_user_chatgpt(self, **kwargs) -> ChatGPT:
+        """
+        Spawn a new ChatGPT instance for a user
+        """
         user: str = kwargs.get('user', None)
         access_token: str = kwargs.get('access_token', None)
         user_plus: str = kwargs.get('user_plus', 'false')
@@ -148,6 +199,9 @@ class ChatGPTServer:
         return chatgpt
     
     async def __store_conversation(self, **kwargs) -> None:
+        """
+        Store conversation data in JSON file
+        """
         user: str = kwargs.get("user")
         response: dict = kwargs.get("response")
         user_id: str = Settings.API_KEYS[user]['user_id']
@@ -179,6 +233,10 @@ class ChatGPTServer:
         await self.__load_conversations()
 
     async def recall(self, **kwargs) -> str:
+        """
+        Recalls a conversation from the conversation database
+        """
+        await self.__load_api_users()
         user: str = kwargs.get('user', None)
         conversation_id: str = kwargs.get('conversation_id', "")
         user_id = self.users[user]['user_id']
@@ -213,10 +271,13 @@ class ChatGPTServer:
         return response
 
     async def process_chagpt_request(self, **kwargs) -> dict:
+        """
+        Process a ChatGPT request
+        """
+        await self.__refresh_cloudflare()
         user: str = kwargs.get('user', None)
         prompt: str = kwargs.get('prompt', Settings.API_DEFAULT_PROMPT)
         conversation_id: str = kwargs.get('conversation_id', "")
-        parent_message_id: str = kwargs.get('parent_message_id', "")
         plus: str = kwargs.get('plus', 'any')
         type: str = kwargs.get('type', 'builtin')
         access_token: str = kwargs.get('access_token', None)
@@ -226,8 +287,7 @@ class ChatGPTServer:
 
         response: dict = {}
         followup: bool = False
-
-        print (parent_message_id)
+        conversation_last_message_id: str = None
 
         if conversation_id != "" and conversation_id is not None:
             followup = True
@@ -251,31 +311,15 @@ class ChatGPTServer:
                     response['message'] = 'Conversation found, but was started using a Builtin API Instance. Please remove the Access Token to continue the conversation using Builtin API Instance.'
                 return response
             
-            #Check if parent message exists
-            if parent_message_id == "":
-                response['status'] = 'error'
-                response['message'] = 'No parent message id specified. Please try again'
-                return response
-            
-            #Check if parent message exists within conversation
-            if parent_message_id not in conversation['messages']:
-                response['status'] = 'error'
-                response['message'] = 'Parent message id not found within provided coversation id. It may have been purged from the cache. Please try again with a more recent message or start a new conversation.'
-                return response
-            
-            #Check if parent message id matches last message id in conversation
+            #Get last message in conversation, then assign it's message id to conversation_message_id to be used as parent_message_id
             conversation_length = len(conversation['messages']) #Get length of conversation
             conversation_message_index = conversation_length #Get index of next message based on length of conversation
             conversation_messages: list = list(conversation['messages'].keys()) #Get list of all messages in conversation
             conversation_last_message_id = max(conversation_messages, key=lambda k: self.conversations[user_id]['conversations'][conversation_id]['messages'][k]['conversation_message_index']) #Get last message key based on message index of each message in conversation
-            if conversation_last_message_id != parent_message_id:
-                response['status'] = 'error'
-                response['message'] = 'Parent message id does not match the last message id in the conversation. Please try again with the last message id or start a new conversation.'
-                return response
             
             #Get last message prompt and reply from conversation and append to response
-            last_message_prompt = conversation['messages'][parent_message_id]['prompt']
-            last_message_reply = conversation['messages'][parent_message_id]['reply']
+            last_message_prompt = conversation['messages'][conversation_last_message_id]['prompt']
+            last_message_reply = conversation['messages'][conversation_last_message_id]['reply']
         
             if type == 'builtin':
                 target_instance = conversation['api_instance']
@@ -299,7 +343,7 @@ class ChatGPTServer:
                 elif plus == "true":
                     chatgpt: ChatGPT = await self.__get_chatgpt(type='plus')
 
-        response: dict = await chatgpt.ask(user=user, prompt=prompt, conversation_id=conversation_id, parent_message_id=parent_message_id)        
+        response: dict = await chatgpt.ask(user=user, prompt=prompt, conversation_id=conversation_id, parent_message_id=conversation_last_message_id)        
 
         if followup:
             response['conversation_message_index'] = conversation_message_index
@@ -318,6 +362,9 @@ class ChatGPTServer:
         return response
 
     async def process_reply_only(self, **kwargs) -> str:
+        """
+        Processes a reply only response from the API and returns a formatted string        
+        """
         response: dict = kwargs.get('response', None)
         pretty: str = kwargs.get('pretty', 'false')
         if 'status' in response:
@@ -341,7 +388,7 @@ class ChatGPTServer:
             return "Error: Malformed response"
 
     
-    async def __reload_users(self):
+    async def __reload_users(self) -> None:
         """
         Reloads the API user database
         """
@@ -349,7 +396,7 @@ class ChatGPTServer:
             keys = json.load(f)
         Settings.API_KEYS = keys['API_KEYS']
     
-    async def add_user(self, **kwargs):
+    async def add_user(self, **kwargs) -> tuple:
         """
         Adds a user to the user database
         """
@@ -380,6 +427,7 @@ class ChatGPTServer:
                 status = 'success'
                 message = 'User added'
                 key = api_key
+                await self.__load_api_users()
                 return status, message, key
             else:
                 status = 'error'

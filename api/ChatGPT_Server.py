@@ -37,7 +37,6 @@ async def api_chat():
         prompt = request.args.get("prompt", Settings.API_DEFAULT_PROMPT)
         user = request.args.get("user", None)
         conversation_id = request.args.get("conversation_id", None)
-        parent_message_id = request.args.get("parent_message_id", None)
         plus = request.args.get("plus", "false")
         reply_only = request.args.get("reply_only", "false")
         pretty = request.args.get("pretty", "false")
@@ -47,7 +46,6 @@ async def api_chat():
         prompt = request.json.get("prompt", Settings.API_DEFAULT_PROMPT)
         user = request.json.get("user", None)
         conversation_id = request.json.get("conversation_id", None)
-        parent_message_id = request.json.get("parent_message_id", None)
         plus = request.json.get("plus", "false")
         reply_only = request.json.get("reply_only", "false")
         pretty = request.json.get("pretty", "false")
@@ -63,7 +61,6 @@ async def api_chat():
             user=user,
             prompt=prompt,
             conversation_id=conversation_id,
-            parent_message_id=parent_message_id,
             type='user',
             access_token=access_token,
             user_plus=user_plus
@@ -73,7 +70,6 @@ async def api_chat():
             user=user,
             prompt=prompt,
             conversation_id=conversation_id,
-            parent_message_id=parent_message_id,
             plus=plus
             )
             
@@ -107,7 +103,6 @@ async def chat():
                 user=form.api_key.data,
                 prompt=form.prompt.data,
                 conversation_id=form.conversation_id.data,
-                parent_message_id=form.parent_message_id.data,
                 type='user',
                 access_token=form.access_token.data,
                 user_plus=form.user_plus.data
@@ -117,7 +112,6 @@ async def chat():
                 user=form.api_key.data,
                 prompt=form.prompt.data,
                 conversation_id=form.conversation_id.data,
-                parent_message_id=form.parent_message_id.data,
                 plus=form.plus.data
                 )
         

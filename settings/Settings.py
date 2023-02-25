@@ -22,10 +22,37 @@ else:
 #IMPORT HELPER FUNCTIONS
 from helpers.General import generate_api_key, json_key_exists, add_json_key
 
-#LOADS API USER DATABASE
+#SETUP APP SECRET IF NOT PRESENT
+update_settings = False
+if not json_key_exists(settings, 'api_server', 'app_secret'):                       #if admin_api_key is not present in settings.json
+    add_json_key(settings, generate_api_key(), 'api_server', 'app_secret')          #add admin_api_key to settings.json
+    update_settings = True
+if update_settings:
+    with open('./settings.json', 'w') as f:
+        json.dump(settings, f, indent=4)
+    with open('./settings.json', 'r') as f:
+        settings = json.load(f)
+
+#SETUP ADMIN API KEY IF NOT PRESENT
+#Load API keys from users.json
 with open('./users.json', 'r') as f:
     users = json.load(f)
 API_KEYS = users['API_KEYS']
+
+update_users = False
+
+if len(API_KEYS) == 0:
+    update_users = True
+    new_key = generate_api_key()
+    add_json_key(API_KEYS, {'user_id': 'changeme', 'username': 'changeme', 'plus': False, 'is_admin': True, 'is_client': True}, new_key)
+
+if update_users:
+    users['API_KEYS'] = API_KEYS
+    with open('./users.json', 'w') as f:
+        json.dump(users, f, indent=4)
+    with open('./users.json', 'r') as f:
+        users = json.load(f)
+    API_KEYS = users['API_KEYS']
 
 async def reload_users():
     """
@@ -35,26 +62,6 @@ async def reload_users():
     with open('./users.json', 'r') as f:
         users = json.load(f)
     API_KEYS = users['API_KEYS']
-
-update_settings = False
-#SET ADMIN API KEYS IF NOT PRESENT
-if not json_key_exists(settings, 'api_server', 'admin_api_key'):                    #if admin_api_key is not present in settings.json
-    add_json_key(settings, generate_api_key(), 'api_server', 'admin_api_key')       #add admin_api_key to settings.json
-    update_settings = True
-if not json_key_exists(settings, 'api_server', 'readonly_api_key'):                 #if readonly_api_key is not present in settings.json
-    add_json_key(settings, generate_api_key(), 'api_server', 'readonly_api_key')    #add readonly_api_key to settings.json
-    update_settings = True
-if not json_key_exists(settings, 'api_server', 'readwrite_api_key'):                #if readwrite_api_key is not present in settings.json
-    add_json_key(settings, generate_api_key(), 'api_server', 'readwrite_api_key')   #add readwrite_api_key to settings.json
-    update_settings = True
-if not json_key_exists(settings, 'api_server', 'app_secret'):                       #if admin_api_key is not present in settings.json
-    add_json_key(settings, generate_api_key(), 'api_server', 'app_secret')          #add admin_api_key to settings.json
-    update_settings = True
-if update_settings:
-    with open('./settings.json', 'w') as f:
-        json.dump(settings, f, indent=4)
-    with open('./settings.json', 'r') as f:
-        settings = json.load(f)
 
 #SETUP OPENAI API DEFAULTS
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL") or str(settings['openai']['base_url'])
@@ -72,9 +79,6 @@ API_USER_AGENT: str = None
 API_LAST_CF_REFRESH: datetime = None
 
 #SETUP API DEFAULTS
-API_ADMIN_KEY = settings['api_server']['admin_api_key']
-API_READONLY_KEY = settings['api_server']['readonly_api_key']
-API_READWRITE_KEY = settings['api_server']['readwrite_api_key']
 API_DEFAULT_PROXY = settings['api_server']['default_proxy']
 API_APP_SECRET = settings['api_server']['app_secret']
 API_CF_REFRESH_INTERVAL = settings['api_server']['cf_refresh_interval']
@@ -100,3 +104,4 @@ ENDPOINT_BROWSER_ADD_USER = BROWSER_ENDPOINTS['add_user']['url']
 ENDPOINT_API_CHATGPT = API_ENDPOINTS['chatgpt']['url']
 ENDPOINT_API_CHATRECALL = API_ENDPOINTS['chatrecall']['url']
 ENDPOINT_API_ACCESS_TOKEN = API_ENDPOINTS['access_token']['url']
+ENDPOINT_API_ADD_USER = API_ENDPOINTS['add_user']['url']

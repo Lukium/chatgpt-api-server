@@ -1,5 +1,5 @@
 #IMPORT BUILT-IN LIBRARIES
-#import asyncio
+from copy import deepcopy
 from datetime import datetime
 import json
 
@@ -30,7 +30,8 @@ class ChatGPTServer:
         self.conversations: dict = {}
         self.chatgpt_instances: list = []
         self.chatgpt_free_instances: list = []
-        self.chatgpt_plus_instances: list = []        
+        self.chatgpt_plus_instances: list = []
+        self.loop = None        
         with open('./settings.json', 'r') as f:
             self.settings = json.load(f)
 
@@ -38,7 +39,7 @@ class ChatGPTServer:
     async def create(cls, **kwargs) -> 'ChatGPTServer':
         """
         Creates a new instance of the ChatGPTServer class asynchronously and returns it
-        """
+        """        
         current_chatgpt_any = 0
         current_chatgpt_free = 0
         current_chatgpt_plus = 0
@@ -48,7 +49,7 @@ class ChatGPTServer:
         await self.__load_chatgpt_instances()
         await self.__refresh_cloudflare()
         await self.__load_api_users()
-        await self.__load_conversations()        
+        await self.__load_conversations()
         return self
 
     #SETUP CHATGPT INSTANCES
@@ -72,13 +73,14 @@ class ChatGPTServer:
         with open('./users.json', 'r') as f:
             users = (json.load(f))['API_KEYS']
         self.users = users
+        Settings.API_KEYS = users
     
     async def __load_conversations(self) -> dict:
         """
         Loads all conversations from conversations.json
         """
         with open('./conversations.json', 'r') as f:
-            conversations = (json.load(f))['users']
+            conversations = (json.load(f))
         self.conversations = conversations
     
     async def __refresh_cloudflare(self) -> None:
@@ -117,7 +119,6 @@ class ChatGPTServer:
         else:
             print(f'Cloudflare Refresh Not Needed - Last Refresh: {Settings.API_LAST_CF_REFRESH} - Time Delta: {time_delta} - Interval: {Settings.API_CF_REFRESH_INTERVAL}')
 
-
     #SETUP HELPER FUNCTIONS
     async def __get_chatgpt(self, **kwargs) -> ChatGPT:
         """
@@ -140,28 +141,104 @@ class ChatGPTServer:
             if self.current_chatgpt_plus >= len(self.chatgpt_plus_instances):
                 self.current_chatgpt_plus = 0
         return chatgpt
+    
+    async def check_client(self, **kwargs) -> dict:
+        """
+        Check if a client is valid
+        """
+        client = kwargs.get('client', None)
+        response: dict = {}
+
+        if client is None:
+            response['status'] = 'error'
+            response['message'] = 'No client specified'
+            return response
+        elif client not in self.users:
+            response['status'] = 'error'
+            response['message'] = 'Invalid client specified'
+            return response
+        else:
+            if "is_client" in self.users[client]:
+                if self.users[client]["is_client"] == True:
+                    response['status'] = 'success'
+                    response['message'] = 'Client validated'
+                else:
+                    response['status'] = 'error'
+                    response['message'] = 'Client not validated' 
+                    
+        return response
 
     async def check_user(self, **kwargs) -> dict:
         """
         Check if a user is valid
         """
         user = kwargs.get('user', None)
-        API_KEYS = Settings.API_KEYS
         response: dict = {}
 
         if user is None:
             response['status'] = 'error'
             response['message'] = 'No user specified'
             return response
-        elif user not in API_KEYS:
+        elif user not in self.users:
             response['status'] = 'error'
             response['message'] = 'Invalid user specified'
             return response
         else:
             response['status'] = 'success'
             response['message'] = 'User is valid'
-        
-        #print(response)
+            
+        return response
+    
+    async def check_admin(self, **kwargs) -> dict:
+        """
+        Check if admin is valid
+        """
+        user = kwargs.get('user', None)
+        response: dict = {}
+
+        if user is None:
+            response['status'] = 'error'
+            response['message'] = 'No user specified'
+            return response
+        elif user not in self.users:
+            response['status'] = 'error'
+            response['message'] = 'Invalid user specified'
+            return response
+        else:
+            if 'is_admin' in self.users[user]:
+                if self.users[user]['is_admin'] == True:
+                    response['status'] = 'success'
+                    response['message'] = 'Admin validated'
+                else:
+                    response['status'] = 'error'
+                    response['message'] = 'Admin not validated'
+
+        return response
+    
+    async def check_client(self, **kwargs) -> dict:
+        """
+        Check if a client is valid
+        """
+        user = kwargs.get('user', None)
+        response: dict = {}
+
+        if user is None:
+            response['status'] = 'error'
+            response['message'] = 'No client specified'
+            return response
+        elif user not in self.users:
+            response['status'] = 'error'
+            response['message'] = 'Invalid client specified'
+            return response
+        else:
+            if 'is_client' in self.users[user]:
+                if self.users[user]['is_client'] == True:
+                    response['status'] = 'success'
+                    response['message'] = 'Client validated'
+                else:
+                    response['status'] = 'error'
+                    response['message'] = 'Client not validated'        
+        print(response)
         return response
 
     async def retrieve_access_token(self, **kwargs) -> str:
@@ -202,6 +279,7 @@ class ChatGPTServer:
         """
         Store conversation data in JSON file
         """
+        client_id: str = kwargs.get("client_id")
         user: str = kwargs.get("user")
         response: dict = kwargs.get("response")
         user_id: str = Settings.API_KEYS[user]['user_id']
@@ -213,35 +291,58 @@ class ChatGPTServer:
             'prompt': response['api_prompt'],            
             'reply': response['message']['content']['parts'][0],
             'origin_time':  response['api_prompt_time_origin'],
-            'conversation_message_index': response['conversation_message_index']
         }
 
-        with open('conversations.json', 'r') as f:
-            conversations = json.load(f)
-        if user_id not in conversations['users']:
-            add_json_key(conversations['users'], {'username': Settings.API_KEYS[user]['username'], 'conversations': {}}, user_id)
-            
-        if conversation_id not in conversations['users'][user_id]['conversations']:
-            add_json_key(conversations['users'][user_id]['conversations'], {'title': response['conversation_title'], 'api_instance_type': response['api_instance_type'], 'api_instance': response['api_instance_identity'], 'messages': {}}, conversation_id)
+        conversations = self.conversations
+        users = self.users
 
-        if message_id not in conversations['users'][user_id]['conversations'][conversation_id]['messages']:
-            add_json_key(conversations['users'][user_id]['conversations'][conversation_id]['messages'], data, message_id)
+        if client_id not in conversations['clients']:
+            add_json_key(conversations['clients'], {'users': {}}, client_id)
+        client_users = conversations['clients'][client_id]['users']
+
+        if user_id not in client_users:
+            add_json_key(client_users, {'username': users[user]['username'], 'conversations': {}}, user_id)
+        user_conversations = client_users[user_id]['conversations']
+            
+        if conversation_id not in user_conversations:
+            add_json_key(user_conversations, {'title': response['conversation_title'], 'api_instance_type': response['api_instance_type'], 'api_instance': response['api_instance_identity'], 'messages': {}}, conversation_id)
+        conversation_messages = user_conversations[conversation_id]['messages']
+
+        if message_id not in conversation_messages:
+            add_json_key(conversation_messages, data, message_id)
 
         with open('conversations.json', 'w') as f:
             json.dump(conversations, f, indent=4)
         
         await self.__load_conversations()
+    
+    async def __sort_conversation_chronologically(self, **kwargs) -> list:
+        """
+        Sort a dictionary by value of subkey
+        """
+        user_messages = kwargs.get('user_messages', None)
+        for k, v in user_messages.items():
+            v["origin_time"] = datetime.strptime(v["origin_time"], "%Y-%m-%d %H:%M:%S.%f")
+        sorted_list = sorted(user_messages.items(), key=lambda x: x[1]["origin_time"])
+        return sorted_list
 
-    async def recall(self, **kwargs) -> str:
+    async def recall(self, **kwargs) -> dict:
         """
         Recalls a conversation from the conversation database
         """
-        await self.__load_api_users()
+        client = kwargs.get('client', 'self')
         user: str = kwargs.get('user', None)
         conversation_id: str = kwargs.get('conversation_id', "")
-        user_id = self.users[user]['user_id']
-        user_conversations = self.conversations[user_id]['conversations']
 
+        if client == 'self' or client is None:
+            client_id = 'self'
+        else:
+            client_id = self.users[client]['user_id']
+        user_id = self.users[user]['user_id']
+
+        #Create a copy of the conversation data using deepcopy to avoid modifying the original data
+        user_conversations = deepcopy(self.conversations['clients'][client_id]['users'][user_id]['conversations'])        
+        
         response = {}
         if conversation_id == "":
             for key in user_conversations:
@@ -252,21 +353,17 @@ class ChatGPTServer:
             response['conversation_id'] = conversation_id
             response['conversation_title'] = user_conversations[conversation_id]['title']
 
-            tuple_list = [(key, value) for key, value in user_conversations[conversation_id]['messages'].items()]
-            sorted_tuple_list = sorted(tuple_list, key=lambda x: x[1]["conversation_message_index"])
-            sorted_list = [x for x in sorted_tuple_list]
-            for message in sorted_list:
-                message[1].pop('conversation_message_index')
+            user_messages = user_conversations[conversation_id]['messages']
+            sorted_messages = await self.__sort_conversation_chronologically(user_messages=user_messages)
+            for message in sorted_messages:
                 message[1].pop('origin_time')
             final_list: list = []
-            for message in sorted_list:
-                dict = {
+            for message in sorted_messages:
+                message_dict = {
                     message[0] : message[1]
                 }
-                final_list.append(dict)
+                final_list.append(message_dict)
             response['messages'] = final_list
-        
-        response = json.dumps(response, indent=4)
         
         return response
 
@@ -275,9 +372,10 @@ class ChatGPTServer:
         Process a ChatGPT request
         """
         await self.__refresh_cloudflare()
+        client: str = kwargs.get('client', 'self')
         user: str = kwargs.get('user', None)
         prompt: str = kwargs.get('prompt', Settings.API_DEFAULT_PROMPT)
-        conversation_id: str = kwargs.get('conversation_id', "")
+        conversation_id: str = kwargs.get('conversation_id', '')
         plus: str = kwargs.get('plus', 'any')
         type: str = kwargs.get('type', 'builtin')
         access_token: str = kwargs.get('access_token', None)
@@ -289,16 +387,38 @@ class ChatGPTServer:
         followup: bool = False
         conversation_last_message_id: str = None
 
+        if client == 'self' or client is None:
+            client_id = 'self'
+        else:
+            client_id = self.users[client]['user_id']
+        user_id = self.users[user]['user_id']
+
         if conversation_id != "" and conversation_id is not None:
-            followup = True
-            user_id = self.users[user]['user_id']
+            followup = True            
+            
+            #Check if client has conversations
+            if client_id not in self.conversations['clients']:
+                response['status'] = 'error'
+                response['message'] = 'This client does not appear to have any conversations. Please start a new conversation using this client.'
+                return response
+            else:
+                client_users = self.conversations['clients'][client_id]['users']
+            
+            #Check if user has conversations
+            if user_id not in client_users:
+                response['status'] = 'error'
+                response['message'] = 'This user does not appear to have any conversations. Please start a new conversation using this user.'
+                return response
+            else:
+                user_conversations = client_users[user_id]['conversations']
+            
             #Check if conversation exists
-            if conversation_id not in self.conversations[user_id]['conversations']:
+            if conversation_id not in user_conversations:
                 response['status'] = 'error'
                 response['message'] = 'Conversation not found. It either does not exist or has been purged from the cache. Please try again with a new conversation id or start a new conversation.'
                 return response
             else:
-                conversation = self.conversations[user_id]['conversations'][conversation_id]
+                conversation = user_conversations[conversation_id]
                 conversation_title = conversation['title']
                 api_instance_type = conversation['api_instance_type']
 
@@ -311,15 +431,10 @@ class ChatGPTServer:
                     response['message'] = 'Conversation found, but was started using a Builtin API Instance. Please remove the Access Token to continue the conversation using Builtin API Instance.'
                 return response
             
-            #Get last message in conversation, then assign it's message id to conversation_message_id to be used as parent_message_id
-            conversation_length = len(conversation['messages']) #Get length of conversation
-            conversation_message_index = conversation_length #Get index of next message based on length of conversation
-            conversation_messages: list = list(conversation['messages'].keys()) #Get list of all messages in conversation
-            conversation_last_message_id = max(conversation_messages, key=lambda k: self.conversations[user_id]['conversations'][conversation_id]['messages'][k]['conversation_message_index']) #Get last message key based on message index of each message in conversation
-            
-            #Get last message prompt and reply from conversation and append to response
-            last_message_prompt = conversation['messages'][conversation_last_message_id]['prompt']
-            last_message_reply = conversation['messages'][conversation_last_message_id]['reply']
+            user_messages = deepcopy(conversation['messages'])
+            sorted_messages = await self.__sort_conversation_chronologically(user_messages=user_messages)
+            last_message_prompt = sorted_messages[-1][1]['prompt']
+            last_message_reply = sorted_messages[-1][1]['reply']
         
             if type == 'builtin':
                 target_instance = conversation['api_instance']
@@ -346,15 +461,17 @@ class ChatGPTServer:
         response: dict = await chatgpt.ask(user=user, prompt=prompt, conversation_id=conversation_id, parent_message_id=conversation_last_message_id)        
 
         if followup:
-            response['conversation_message_index'] = conversation_message_index
+            #response['conversation_message_index'] = conversation_message_index
             response['conversation_title'] = conversation_title
             response['last_message_prompt'] = last_message_prompt
             response['last_message_reply'] = last_message_reply
-        else:
-            response['conversation_message_index'] = 0
+        #else:
+        #    response['conversation_message_index'] = 0
+        
+        response['api_client_id'] = client_id
 
         if response['status'] == 'success':
-            await self.__store_conversation(user=user, response=response) #Store conversation in database
+            await self.__store_conversation(client_id=client_id, user=user, response=response) #Store conversation in database
         
         del response['api_instance_type']
         del response['api_instance_identity']
@@ -386,7 +503,6 @@ class ChatGPTServer:
                         
         if well_formed_response:
             return "Error: Malformed response"
-
     
     async def __reload_users(self) -> None:
         """
@@ -400,9 +516,11 @@ class ChatGPTServer:
         """
         Adds a user to the user database
         """
-        userid: str = str(kwargs['userid'])
-        username: str = str(kwargs['username'])
-        plus: bool = kwargs['plus']
+        await self.__load_api_users()
+        userid: str = kwargs.get('userid', None)
+        username: str = kwargs.get('username', None)
+        plus: bool = kwargs.get('plus', False)
+        is_client: bool = kwargs.get('is_client', False)
 
         if json_value_exists(Settings.API_KEYS, userid):
             status = 'error'
@@ -415,6 +533,7 @@ class ChatGPTServer:
                 'user_id': userid,
                 'username': username,
                 'plus': plus,
+                'is_client': is_client,
             }, api_key)
             with open('./users.json', 'r') as f:
                 keys = json.load(f)

@@ -2,19 +2,24 @@
     "openai": {
         "instances": [
             {
-                "email": "",
-                "password": "",
+                "email": "email1@email.com",
+                "password": "password1",
                 "plus": true
+            },
+            {
+                "email": "email2@email.com",
+                "password": "password2",
+                "plus": false
             }
         ],
         "base_url": "https://chat.openai.com",
         "endpoints":{
             "conversation": "/backend-api/conversation",
             "gen_title": "/backend-api/conversation/gen_title"
-        }
+        }        
     },
     "api_server": {
-        "host": "192.168.1.1",
+        "host": "192.168.11.11",
         "port": 5000,
         "default_proxy": "socks5://127.0.0.1:1080",
         "terminal_name": "ChatGPT-API-Server",
@@ -43,6 +48,9 @@
                 },
                 "access_token": {
                     "url": "/api/access-token"
+                },
+                "add_user": {
+                    "url": "/api/client/add-user"
                 }
             }
         }

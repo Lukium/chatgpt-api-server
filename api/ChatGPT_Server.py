@@ -35,6 +35,7 @@ async def api_chat():
 
     if request.method == "GET":
         prompt = request.args.get("prompt", Settings.API_DEFAULT_PROMPT)
+        client = request.args.get("client", None)
         user = request.args.get("user", None)
         conversation_id = request.args.get("conversation_id", None)
         plus = request.args.get("plus", "false")
@@ -44,6 +45,7 @@ async def api_chat():
         user_plus = request.args.get("user_plus", "false")
     elif request.method == "POST":
         prompt = request.json.get("prompt", Settings.API_DEFAULT_PROMPT)
+        client = request.json.get("client", None)
         user = request.json.get("user", None)
         conversation_id = request.json.get("conversation_id", None)
         plus = request.json.get("plus", "false")
@@ -51,13 +53,21 @@ async def api_chat():
         pretty = request.json.get("pretty", "false")
         access_token = request.json.get("access_token", None)
         user_plus = request.json.get("user_plus", "false")
-    
+
+    #Perform Client Check if client is provided
+    if client is not None:
+        client_check = await ChatGPTServer.check_client(user=client)
+        if client_check['status'] == 'error':
+            return client_check, 400 #Return Error Message if Client is Invalid
+
+    #Perform User Check
     user_check = await ChatGPTServer.check_user(user=user)
     if user_check['status'] == 'error':
         return user_check, 400 #Return Error Message if User is Invalid
     
     if access_token != "" and access_token is not None:
         response: dict = await ChatGPTServer.process_chagpt_request(
+            client=client,
             user=user,
             prompt=prompt,
             conversation_id=conversation_id,
@@ -67,6 +77,7 @@ async def api_chat():
             )
     else:
         response: dict = await ChatGPTServer.process_chagpt_request(
+            client=client,
             user=user,
             prompt=prompt,
             conversation_id=conversation_id,
@@ -128,25 +139,29 @@ async def chat():
 async def api_recall():
 
     if request.method == "GET":
+        client = request.args.get("client", None)
         user = request.args.get("user", None)
         conversation_id = request.args.get("conversation_id", None)
     elif request.method == "POST":
+        client = request.json.get("client", None)
         user = request.json.get("user", None)
         conversation_id = request.json.get("conversation_id", None)
 
-    user_check = await ChatGPTServer.check_user(user=user)
-    if user_check['status'] == 'error':
-        return user_check, 400 #Return Error Message if User is Invalid
-    
+    #Perform Client Check if client is provided
+    if client is not None:
+        client_check = await ChatGPTServer.check_client(user=client)
+        if client_check['status'] == 'error':
+            return client_check, 400 #Return Error Message if Client is Invalid
+
     #Perform User Check
     user_check = await ChatGPTServer.check_user(user=user)
     if user_check['status'] == 'error':
         return user_check, 400 #Return Error Message if User is Invalid
     
     if conversation_id is None or conversation_id == "":
-        response = await ChatGPTServer.recall(user=user)
+        response = await ChatGPTServer.recall(client=client, user=user)
     else:
-        response = await ChatGPTServer.recall(user=user, conversation_id=conversation_id)
+        response = await ChatGPTServer.recall(client=client, user=user, conversation_id=conversation_id)
     
     return response, 200
 
@@ -234,26 +249,51 @@ async def access_token():
 @app.route(Settings.ENDPOINT_BROWSER_ADD_USER, methods=["GET", "POST"])
 async def add_user():
     response: dict = {}
-    admin_api_key = request.args.get("admin", None)
-    if admin_api_key is None:
+    admin = request.args.get("admin", None)
+    client = request.args.get("client", None)
+
+    if admin is not None and admin != "":
+        admin_check = await ChatGPTServer.check_admin(user=admin)
+        if admin_check['status'] == 'error':
+            return admin_check, 400 #Return Error Message if Admin is Invalid
+        else:
+            admin = True
+    
+    if client is not None and client != "":
+        client_check = await ChatGPTServer.check_client(user=client)
+        if client_check['status'] == 'error':
+            return client_check, 400 #Return Error Message if Client is Invalid
+        else:
+            client = True
+    
+    if not admin and not client:
         response['status'] = 'error'
-        response['message'] = 'No API Key provided'
-        return jsonify(response), 400
-    elif admin_api_key != Settings.API_ADMIN_KEY:
-        response['status'] = 'error'
-        response['message'] = 'Invalid API Key'
-        return jsonify(response), 400
+        response['message'] = 'No valid Admin or Client API Key provided'
+        return jsonify(response), 400    
     else:
         form = FormAddUser()
         if form.validate_on_submit():
             userid = form.userid.data
             username = form.username.data
             plus = form.plus.data
+            new_user_is_client = form.is_client.data
+
             if plus == "true":
                 plus = True
             elif plus == "false":
                 plus = False
-            status, message, key = await ChatGPTServer.add_user(userid=userid, username=username, plus=plus)
+            if new_user_is_client == "true":
+                new_user_is_client = True
+            elif new_user_is_client == "false":
+                new_user_is_client = False
+
+            if client:
+                if new_user_is_client:
+                    response['status'] = 'error'
+                    response['message'] = 'Clients cannot create new clients'
+                    return jsonify(response), 400            
+            
+            status, message, key = await ChatGPTServer.add_user(userid=userid, username=username, plus=plus, is_client=new_user_is_client)
             response['status'] = status
             response['message'] = message
             response['api_key'] = key
@@ -262,6 +302,71 @@ async def add_user():
             else:
                 return jsonify(response), 200
         return render_template("admin/add-user.html", form=form)
+
+@app.route(Settings.ENDPOINT_API_ADD_USER, methods=["GET", "POST"])
+async def api_add_user():
+    response: dict = {}
+    if request.method == 'GET':
+        admin = request.args.get('admin', None)
+        client = request.args.get('client', None)
+        userid = request.args.get('userid', None)
+        username = request.args.get('username', None)
+        plus = request.args.get('plus', None)
+        new_user_is_client = request.args.get('is_client', None)
+    elif request.method == 'POST':
+        admin = request.json.get('admin', None)
+        client = request.json.get('client', None)
+        userid = request.json.get('userid', None)
+        username = request.json.get('username', None)
+        plus = request.json.get('plus', None)
+        new_user_is_client = request.json.get('is_client', 'false')
+    
+    if admin is not None and admin != "":
+        admin_check = await ChatGPTServer.check_admin(user=admin)
+        if admin_check['status'] == 'error':
+            return admin_check, 400 #Return Error Message if Admin is Invalid
+        else:
+            admin = True
+    
+    if client is not None and client != "":
+        client_check = await ChatGPTServer.check_client(user=client)
+        if client_check['status'] == 'error':
+            return client_check, 400 #Return Error Message if Client is Invalid
+        else:
+            client = True
+    
+    if not admin and not client:
+        response['status'] = 'error'
+        response['message'] = 'No valid Admin or Client API Key provided'
+        return jsonify(response), 400
+    else:
+        if client:
+            if new_user_is_client == "true":
+                response['status'] = 'error'
+                response['message'] = 'Clients cannot create new clients'
+                return jsonify(response), 400
+    
+    if plus == "true":
+        plus = True
+    elif plus == "false":
+        plus = False
+
+    if new_user_is_client == "true":
+        new_user_is_client = True
+    elif new_user_is_client == "false":
+        new_user_is_client = False
+    
+    status, message, key = await ChatGPTServer.add_user(userid=userid, username=username, plus=plus, is_client=new_user_is_client)
+    response['status'] = status
+    response['message'] = message
+    response['api_key'] = key
+    if status == 'error':
+        return jsonify(response), 422
+    else:
+        return jsonify(response), 200
+    
+    
+
 
 #Redirect Root to Browser
 @app.route("/", methods=["GET"])

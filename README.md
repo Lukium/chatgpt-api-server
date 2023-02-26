@@ -1,6 +1,35 @@
 # chatgpt-api-server
 ChatGPT Web API server Flask that can respond both via browser through Flask Forms and directly via POST/GET Requests
 
+## Features:
+### Multi Option Accessibility:
+- POST/GET request for programmatic access
+- WebUI browser access
+### Flexibility:
+- Replies can be either the full JSON or just the cut down reply
+- Endpoints can be easily customized (changing the path) via settings file without any coding understanding needed
+### Basic Permissions:
+- Admin users can create (and soon remove) Client users or regular users
+- Client users can create (and soon remove) regular users that it created
+- Users can only use chatGPT functionality.
+- Users can be given access (or denied) to Plus ChatGPT accounts separately from free accounts.
+### Account Support:
+- Multi/Single built in ChatGPT Accounts, including Pro/Free accounts: accounts will be cycled on each request (follow ups will use the original account to keep conversation integrity)
+- User account via Access Token (which can be retrieved via dedicated endpoint via email/password)
+### Message Handling:
+- In addition to the JSON from the ChatGPT reply, the API will also add additional information to the JSON, including the original prompt, the datetime the query was initiated; if a followup, the last message's prompt and reply, as well as a series of other useful information.
+- All new conversations have a title automatically generated, which is also added to the JSON reply.
+### User Conversation caching and followup:
+- All user conversations are cached to the specific user.
+- Users can recall either all conversations along with their titles or a single conversation including all messages within the conversation (both prompt and reply) sorted chronologically.
+- When a conversation is followed up, the server will automatically use the account that was used to initiate the conversation, and use the last message in that conversation for the parent id, so as to maintain perfect conversation integrity. If the account used originally is not available, the user will receive an error.
+### Client Support:
+- "Client" users can be created by the admin, which can programatically create API keys when necessary. For example: say you wanted to create a Discord Bot that interacts with the API. You could issue it a Client API key, and the bot will be able to automatically generate API keys for users that the bot has determined should be able to access the API.
+### WebUI:
+- Webui can be used for all functionality, including chat, followup, access-token retrival, API Key issuing.
+- WebUI replies can be set to use markdown so they look cleaner.
+- WebUI can also reply in pure JSON
+
 ## FOR EXPERIMENTAL AND LEARNING USE ONLY:
 - I came up with this project while thinking of a use case where OpenAI, when providing its capabilities for an organization, say for example a University and its employees/students, rather than providing individual accounts that are managed by OpenAI, might instead provide a single account for the entire organization, such that the organization can then manage its own users via an API like the one I developed. 
 

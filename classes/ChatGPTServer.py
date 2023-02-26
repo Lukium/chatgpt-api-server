@@ -433,6 +433,7 @@ class ChatGPTServer:
             
             user_messages = deepcopy(conversation['messages'])
             sorted_messages = await self.__sort_conversation_chronologically(user_messages=user_messages)
+            conversation_last_message_id = sorted_messages[-1][0]
             last_message_prompt = sorted_messages[-1][1]['prompt']
             last_message_reply = sorted_messages[-1][1]['reply']
         

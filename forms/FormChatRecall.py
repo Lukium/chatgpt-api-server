@@ -1,6 +1,10 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
+import settings.Settings as global_settings
+import json
+with open('./language/{}.json'.format(global_settings.API_LANGUAGE), 'r',encoding="utf-8") as f:
+    settings = json.load(f)
 
 from settings.Settings import LANG
 

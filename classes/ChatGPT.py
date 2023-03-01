@@ -48,7 +48,7 @@ class ChatGPT:
 
     async def __configure_user(self):
         self.access_token = self.user_access_token
-        with open('./settings.json', 'r') as f:
+        with open('./settings.json', 'r', encoding="utf-8") as f:
             settings = json.load(f)
         api_server_settings = settings['api_server']
         #Make sure the instance has a proxy in settings.json either under "opeanai" or under "api_server"
@@ -75,7 +75,7 @@ class ChatGPT:
         self.identity = self.user
     
     async def __configure(self):
-        with open('./settings.json', 'r') as f:
+        with open('./settings.json', 'r', encoding="utf-8") as f:
             settings = json.load(f)
         instance_settings = settings['openai']['instances'][self.instance]      
         api_server_settings = settings['api_server']
@@ -164,7 +164,7 @@ class ChatGPT:
 
     async def __login(self):
         if self.type == 'builtin':
-            with open('./access_tokens.json', 'r') as f:
+            with open('./access_tokens.json', 'r', encoding="utf-8") as f:
                 access_tokens = json.load(f)
             if self.identity in access_tokens['accounts']:
                 if 'expires_at' in access_tokens['accounts'][self.identity]:
@@ -184,7 +184,7 @@ class ChatGPT:
         await auth.begin()
         self.access_token = await auth.get_access_token()
         if self.type == 'builtin':
-            with open('./access_tokens.json', 'r') as f:
+            with open('./access_tokens.json', 'r', encoding="utf-8") as f:
                 access_tokens = json.load(f)
             if not json_key_exists(access_tokens, 'accounts', self.identity, 'expires_at'):
                 add_json_key(access_tokens['accounts'], {'expires_at': None}, self.identity)
@@ -195,8 +195,8 @@ class ChatGPT:
             access_token = self.access_token
             access_tokens['accounts'][self.identity]['expires_at'] = str(expires_at)
             access_tokens['accounts'][self.identity]['access_token'] = access_token            
-            with open('./access_tokens.json', 'w') as f:
-                json.dump(access_tokens, f, indent=4)
+            with open('./access_tokens.json', 'w', encoding="utf-8") as f:
+                json.dump(access_tokens, f, ensure_ascii=False, indent=4)
         
         #self.session_token = await auth.get_session_token()
         await self.__refresh()

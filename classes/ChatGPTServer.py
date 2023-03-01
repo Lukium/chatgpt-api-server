@@ -33,7 +33,7 @@ class ChatGPTServer:
         self.chatgpt_free_instances: list = []
         self.chatgpt_plus_instances: list = []
         self.clients: list = []
-        with open('./settings.json', 'r') as f:
+        with open('./settings.json', 'r', encoding="utf-8") as f:
             self.settings = json.load(f)
 
     @classmethod
@@ -44,7 +44,7 @@ class ChatGPTServer:
         current_chatgpt_any = 0
         current_chatgpt_free = 0
         current_chatgpt_plus = 0
-        with open('./settings.json', 'r') as f:
+        with open('./settings.json', 'r', encoding="utf-8") as f:
             settings = json.load(f)
         self = cls(current_chatgpt_any=current_chatgpt_any, current_chatgpt_free=current_chatgpt_free, current_chatgpt_plus=current_chatgpt_plus, settings=settings)
         await self.__load_chatgpt_instances()
@@ -73,7 +73,7 @@ class ChatGPTServer:
         """
         Loads all API users from users.json
         """
-        with open('./users.json', 'r') as f:
+        with open('./users.json', 'r', encoding="utf-8") as f:
             users = (json.load(f))['API_KEYS']
         self.users = users
         Settings.API_KEYS = users
@@ -128,7 +128,7 @@ class ChatGPTServer:
         """
         Loads all conversations from conversations.json
         """
-        with open('./conversations.json', 'r') as f:
+        with open('./conversations.json', 'r', encoding="utf-8") as f:
             conversations = (json.load(f))
         self.conversations = conversations
     
@@ -373,8 +373,8 @@ class ChatGPTServer:
         if message_id not in conversation_messages:
             add_json_key(conversation_messages, data, message_id)
 
-        with open('conversations.json', 'w') as f:
-            json.dump(conversations_users, f, indent=4)
+        with open('conversations.json', 'w', encoding="utf-8") as f:
+            json.dump(conversations_users, f, ensure_ascii=False, indent=4)
         
         await self.__load_conversations()
     
@@ -582,11 +582,11 @@ class ChatGPTServer:
                 'clients': [client_id],
                 'is_client': is_client,
             }, api_key)
-            with open('./users.json', 'r') as f:
+            with open('./users.json', 'r', encoding="utf-8") as f:
                 keys = json.load(f)
             keys['API_KEYS'] = Settings.API_KEYS
-            with open('./users.json', 'w') as f:
-                json.dump(keys, f, indent=4)
+            with open('./users.json', 'w', encoding="utf-8") as f:
+                json.dump(keys, f, ensure_ascii=False, indent=4)
             await self.__load_api_users()
             await Settings.reload_users()
             if json_value_exists(Settings.API_KEYS, userid):

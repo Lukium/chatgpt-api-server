@@ -1,0 +1,44 @@
+{
+    "submit": "Submit",
+    "true":"Yes",
+    "false":"No",
+    "api_key":"Lukium Swarm API Key",
+    "api_key_desc":"OVERRIDEN IF PASSED VIA URL [user=] . Lukium Swarm API Key, NOT OpeanAI API Key",
+    "conversation_id":"Conversation ID",
+    "FromAccessToken": {
+        "email":"ChatGPT Email",
+        "email_desc": "Your OpenAI ChatGPT Email. This is the email that you use to login to the OpenAI ChatGPT website.",
+        "password":"ChatGPT Password",
+        "password_desc": "Your OpenAI ChatGPT Password. This is the password that you use to login to the OpenAI ChatGPT website."
+    },
+    "FormAddUser":{
+        "plus":"Plus Access?",
+        "plus_desc":"Should the user have access to the Plus API?",
+        "is_client":"Client Access?",
+        "is_client_desc":"A Client is a user that can create and manage their own API keys and store conversations within their own key in conversations.json. This is useful for developers who want to create their own applications that use the API.",
+        "userid":"User ID",
+        "userid_desc":"The user's ID. This is the ID that will be used to identify the user in the API. This can be any string, but it is recommended to use a unique ID such as a Discord ID or a UUID.",
+        "username":"Username",
+        "username_desc":"The user's username. This is the name that will be displayed in the API. This can be any string, but it is recommended to use the user's Discord username or some other name attached to another platform."
+    },
+    "FormChatGPT":{
+        "prompt":"prompt",
+        "conversation_id_desc":"OPTIONAL - Used to continue a conversation. If not provided, a new conversation will be started.",
+        "plus":"Use Plus or Free?",
+        "plus_true":"uses ChatGPT Plus's model text-davinci-002-render-paid",
+        "plus_false":"uses ChatGPT's model text-davinci-002-render-sha(free&paid)",
+        "plus_any":"First Available",
+        "plus_desc":"Determined whether text-davinci-002-render-sha or text-davinci-002-render-paid are being used (Plus only available for Premium+ Supporters)",
+        "reply_only":"Reply Only?",
+        "reply_only_desc":"Get only the reply, not the full JSON response",
+        "pretty":"Markdown Reply?",
+        "pretty_desc":"Ignored if 'Reply Only' = 'No' | Use markdown styling (prettier) for the response?",
+        "access_token":"OpenAI Access Token",
+        "access_token_desc":"OPTIONAL - OVERRIDEN IF PASSED VIA URL [access_token=] . OpenAI Access Token, NOT Lukium Swarm API Key. Can be retrieved using /access-token endpoint",
+        "user_plus":"text-davinci-002-render-paid?",
+        "user_plus_desc":"Does this access token have OpenAI Plus? and would like to use model 'text-davinci-002-render-paid'"
+    },
+    "FormChatRecall":{
+        "conversation_id_desc":"If NOT passed, will retrieve a list of all conversations' IDs and their titles. If PASSED, will retrieve the conversation's title and all messages' IDs, prompts and replies."
+    }
+}

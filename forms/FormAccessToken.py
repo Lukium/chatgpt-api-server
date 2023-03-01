@@ -1,9 +1,13 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField
 from wtforms.validators import DataRequired
+import settings.Settings as global_settings
+import json
+with open('./language/{}.json'.format(global_settings.API_LANGUAGE), 'r',encoding="utf-8") as f:
+    settings = json.load(f)
 
 class FormAccessToken(FlaskForm):
-    api_key = StringField('API Key', validators=[DataRequired()], description=f'OVERRIDEN IF PASSED VIA URL [user=] . Lukium Swarm API Key, NOT OpeanAI API Key')
-    email = StringField('ChatGPT Email', validators=[DataRequired()], description= "Your OpenAI ChatGPT Email. This is the email that you use to login to the OpenAI ChatGPT website.")
-    password = PasswordField('ChatGPT Password', validators=[DataRequired()], description="Your OpenAI ChatGPT Password. This is the password that you use to login to the OpenAI ChatGPT website.")
-    submit = SubmitField('Submit')
+    api_key = StringField(settings['api_key'], validators=[DataRequired()], description=settings['api_key_desc'])
+    email = StringField(settings['FromAccessToken']['email'], validators=[DataRequired()], description=settings['FromAccessToken']['email_desc'])
+    password = PasswordField(settings['FromAccessToken']['password'], validators=[DataRequired()], description=settings['FromAccessToken']['password_desc'])
+    submit = SubmitField(settings['submit'])

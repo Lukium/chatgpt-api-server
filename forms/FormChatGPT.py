@@ -1,14 +1,18 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, SelectField
 from wtforms.validators import DataRequired
+import settings.Settings as global_settings
+import json
+with open('./language/{}.json'.format(global_settings.API_LANGUAGE), 'r',encoding="utf-8") as f:
+    settings = json.load(f)
 
 class FormChatGPT(FlaskForm):
-    api_key = StringField('Lukium Swarm API Key', validators=[DataRequired()], description=f'OVERRIDEN IF PASSED VIA URL [user=] . Lukium Swarm API Key, NOT OpeanAI API Key')    
-    prompt = TextAreaField('Prompt', validators=[DataRequired()])
-    conversation_id = StringField('Conversation ID', description='OPTIONAL - Used to continue a conversation. If not provided, a new conversation will be started.')
-    plus = SelectField(label='Use Plus or Free?', choices=[('any', 'First Available'), ('true', 'Plus Only'), ('false', 'Free Only')], default='false', description='Use Plus or Free (Plus only available for Premium+ Supporters)')
-    reply_only = SelectField('Reply Only?', description='Get only the reply, not the full JSON response', choices=[('false', 'No'), ('true', 'Yes')], default='true')
-    pretty = SelectField('Markdown Reply?', description='Ignored if "Reply Only" = "No" | Use markdown styling (prettier) for the response?', choices=[('false', 'No'), ('true', 'Yes')], default='true')    
-    access_token = StringField('OpenAI Access Token', description=f'OPTIONAL - OVERRIDEN IF PASSED VIA URL [access_token=] . OpenAI Access Token, NOT Lukium Swarm API Key. Can be retrieved using /access-token endpoint')
-    user_plus = SelectField(label='OpenAI Plus?', choices=[('true', 'Yes'), ('false', 'No')], default='false', description='Does this access token have OpenAI Plus?')
-    submit = SubmitField('Submit')
+    api_key = StringField(settings['api_key'], validators=[DataRequired()], description=settings['api_key_desc'])    
+    prompt = TextAreaField(settings['FormChatGPT']['prompt'], validators=[DataRequired()])
+    conversation_id = StringField(settings['conversation_id'], description=settings['FormChatGPT']['conversation_id_desc'])
+    plus = SelectField(label=settings['FormChatGPT']['plus'], choices=[('any', settings['FormChatGPT']['plus_any']), ('true', settings['FormChatGPT']['plus_true']), ('false', settings['FormChatGPT']['plus_false'])], default='false', description=settings['FormChatGPT']['plus_desc'])
+    reply_only = SelectField(settings['FormChatGPT']['reply_only'], description=settings['FormChatGPT']['reply_only_desc'], choices=[('false', settings['false']), ('true', settings['true'])], default='false')
+    pretty = SelectField(settings['FormChatGPT']['pretty'], description=settings['FormChatGPT']['reply_only_desc'], choices=[('false', settings['false']), ('true', settings['true'])], default='true')    
+    access_token = StringField(settings['FormChatGPT']['access_token'], description=settings['FormChatGPT']['access_token_desc'])
+    user_plus = SelectField(label=settings['FormChatGPT']['user_plus'], choices=[('true', settings['true']), ('false', settings['false'])], default='false', description=settings['FormChatGPT']['user_plus_desc'])
+    submit = SubmitField(settings['submit'])

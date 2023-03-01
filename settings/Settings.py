@@ -5,7 +5,7 @@ import os
 import platform
 
 #LOAD SETTINGS FROM SETTINGS.JSON
-with open('./settings.json', 'r') as f:
+with open('./settings.json', 'r', encoding="utf-8") as f:
     settings = json.load(f)
 
 #SETUP API TERMINAL NAME
@@ -28,14 +28,14 @@ if not json_key_exists(settings, 'api_server', 'app_secret'):                   
     add_json_key(settings, generate_api_key(), 'api_server', 'app_secret')          #add admin_api_key to settings.json
     update_settings = True
 if update_settings:
-    with open('./settings.json', 'w') as f:
-        json.dump(settings, f, indent=4)
-    with open('./settings.json', 'r') as f:
+    with open('./settings.json', 'w', encoding="utf-8") as f:
+        json.dump(settings, f, ensure_ascii=False, indent=4)
+    with open('./settings.json', 'r',encoding="utf-8") as f:
         settings = json.load(f)
 
 #SETUP ADMIN API KEY IF NOT PRESENT
 #Load API keys from users.json
-with open('./users.json', 'r') as f:
+with open('./users.json', 'r', encoding="utf-8") as f:
     users = json.load(f)
 API_KEYS = users['API_KEYS']
 
@@ -48,9 +48,9 @@ if len(API_KEYS) == 0:
 
 if update_users:
     users['API_KEYS'] = API_KEYS
-    with open('./users.json', 'w') as f:
+    with open('./users.json', 'w', encoding="utf-8") as f:
         json.dump(users, f, indent=4)
-    with open('./users.json', 'r') as f:
+    with open('./users.json', 'r', encoding="utf-8") as f:
         users = json.load(f)
     API_KEYS = users['API_KEYS']
 
@@ -59,7 +59,7 @@ async def reload_users():
     Reloads the API user database
     """
     global API_KEYS
-    with open('./users.json', 'r') as f:
+    with open('./users.json', 'r', encoding="utf-8") as f:
         users = json.load(f)
     API_KEYS = users['API_KEYS']
 
@@ -80,6 +80,7 @@ API_USER_AGENT: str = None
 API_LAST_CF_REFRESH: datetime = None
 
 #SETUP API DEFAULTS
+API_LANGUAGE="en-US"
 API_DEFAULT_PROXY = settings['api_server']['default_proxy']
 API_DEFAULT_USER_AGENT = settings['api_server']['default_user_agent']
 API_APP_SECRET = settings['api_server']['app_secret']

@@ -23,8 +23,10 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 - All user conversations are cached to the specific user.
 - Users can recall either all conversations along with their titles or a single conversation including all messages within the conversation (both prompt and reply) sorted chronologically.
 - When a conversation is followed up, the server will automatically use the account that was used to initiate the conversation, and use the last message in that conversation for the parent id, so as to maintain perfect conversation integrity. If the account used originally is not available, the user will receive an error.
+- Conversations can be removed from the cache using the `remove-conversation` endpoint
 ### Client Support:
 - "Client" users can be created by the admin, which can programmatically create API keys when necessary. For example: say you wanted to create a Discord Bot that interacts with the API. You could issue it a Client API key, and the bot will be able to automatically generate API keys for users that the bot has determined should be able to access the API.
+- After generating an API key for its user, the Client can refer to its user via its own `userid` for ease of use (without having to use the API key)
 ### WebUI:
 - WebUI can be used for all functionality, including chat, followup, access-token retrieval, API Key issuing.
 - WebUI replies can be set to use markdown so they look cleaner.

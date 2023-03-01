@@ -1,4 +1,4 @@
-# ChatGPT-api-server
+# ChatGPT-API-Server
 ChatGPT Web API server Flask that can respond both via browser through Flask Forms and directly via POST/GET Requests
 
 ## Features:

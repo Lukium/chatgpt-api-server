@@ -21,9 +21,10 @@ Lukium Swarm - ChatGPT API
   <div class="row">
     <div class="col-md-10 col-lg-8 mx-lg-auto mx-md-auto">
 
-      <h1 class="pt-5 pb-2">Lukium Swarm - ChatGPT API</h1>
+      <h1 class="pt-5 pb-2">{{ title }}</h1>
+      <small class="form-text text-muted" style="text-align: center;">{{ message_under_title }}</small></p>
 
-      <p class="lead">Please enter your prompt below as well as your Lukium Swarm - ChatGPT API Key</p>
+      <p class="lead">{{ action_instruction }}</p>
 
       {{ wtf.quick_form(form) }}
 

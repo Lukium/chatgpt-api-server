@@ -109,3 +109,13 @@ ENDPOINT_API_CHATGPT = API_ENDPOINTS['chatgpt']['url']
 ENDPOINT_API_CHATRECALL = API_ENDPOINTS['chatrecall']['url']
 ENDPOINT_API_ACCESS_TOKEN = API_ENDPOINTS['access_token']['url']
 ENDPOINT_API_ADD_USER = API_ENDPOINTS['add_user']['url']
+
+#SETUP WEBUI LANGUAGE
+LANG: dict = {}
+API_WEBUI_LANGUAGE = settings['api_server']['webui_language']
+try:
+    API_WEBUI_LANGUAGE_FILE = f'./localizations/{API_WEBUI_LANGUAGE}.json'
+except:
+    raise Exception(f'Invalid webui language: {API_WEBUI_LANGUAGE}')
+with open(API_WEBUI_LANGUAGE_FILE, 'r') as f:
+    LANG = json.load(f)

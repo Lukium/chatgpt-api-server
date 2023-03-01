@@ -19,7 +19,8 @@
             "gen_title": "/conversation/gen_title"
         }
     },
-    "api_server": {
+    "api_server": {        
+        "webui_language": "en-us",
         "host": "192.168.11.11",
         "port": 5000,
         "default_proxy": "socks5://127.0.0.1:1080",

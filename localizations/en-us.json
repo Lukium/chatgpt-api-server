@@ -1,0 +1,106 @@
+{
+    "htmls":{
+        "index": {
+            "title": "Lukium Swarm - ChatGPT API",
+            "message_under_title": "For Experiment and Learning Only",
+            "action_instruction": "Please enter your prompt below as well as your Lukium Swarm - ChatGPT API Key",
+            "message_after_submit_1": "Please be patient while your request is processed...",
+            "message_after_submit_2": "The time required to process is proportional to the length of the reply."
+        },
+        "recall": {
+            "title": "Lukium Swarm - ChatGPT API",
+            "message_under_title": "For Experiment and Learning Only",
+            "action_instruction": "Please enter your API Key and Conversation ID below"
+        },
+        "access_token": {
+            "title": "Lukium Swarm - ChatGPT API",
+            "message_under_title": "For Experiment and Learning Only",
+            "action_instruction": "Please enter your ChatGPT Email and Password below to retrieve your access token",
+            "message": "This will retrieve your current ChatGPT OpenAI Access Token using your ChatGPT Email and Password."
+        },
+        "add_user": {
+            "title": "Lukium Swarm - ChatGPT API",
+            "message_under_title": "For Experiment and Learning Only",
+            "action_instruction": "Please enter information below to add a new API key for a user"
+        }
+    },
+    "forms":{
+        "access_token": {
+            "labels": {
+                "api_key": "API Key",
+                "email": "ChatGPT Email",
+                "password": "ChatGPT Password",
+                "submit": "Submit"
+            },
+            "descriptions": {
+                "api_key": "OVERRIDEN IF PASSED VIA URL [user=] . Lukium Swarm API Key, NOT OpeanAI API Key",
+                "email": "Your OpenAI ChatGPT Email. This is the email that you use to login to the OpenAI ChatGPT website.",
+                "password": "Your OpenAI ChatGPT Password. This is the password that you use to login to the OpenAI ChatGPT website.",
+                "submit": ""
+            }
+        },
+        "add_user": {
+            "labels": {
+                "plus": "Plus Access?",
+                "is_client": "Client Access?",
+                "userid": "User ID",
+                "username": "Username",
+                "submit": "Submit"
+            },
+            "descriptions": {
+                "plus": "Should the user have access to the Plus API?",
+                "is_client": "A Client is a user that can create and manage their own API keys and store conversations within their own key in conversations.json. This is useful for developers who want to create their own applications that use the API.",
+                "userid": "The user's ID. This is the ID that will be used to identify the user in the API. This can be any string, but it is recommended to use a unique ID such as a Discord ID or a UUID.",
+                "username": "The user's username. This is the name that will be displayed in the API. This can be any string, but it is recommended to use the user's Discord username or some other name attached to another platform.",
+                "submit": ""
+            },
+            "choices": {
+                "yes": "Yes",
+                "no": "No"
+            }
+        },
+        "chatgpt": {
+            "labels": {
+                "api_key": "Lukium Swarm API Key",
+                "prompt": "Prompt",
+                "conversation_id": "Conversation ID",
+                "plus": "Use Plus or Free?",
+                "reply_only": "Reply Only?",
+                "pretty": "Markdown Reply?",
+                "access_token": "OpenAI Access Token",
+                "user_plus": "OpenAI Plus?",
+                "submit": "Submit"
+            },
+            "descriptions": {
+                "api_key": "OVERRIDEN IF PASSED VIA URL [user=] . Lukium Swarm API Key, NOT OpeanAI API Key",
+                "prompt": "",
+                "conversation_id": "OPTIONAL - Used to continue a conversation. If not provided, a new conversation will be started.",
+                "plus": "Use Plus or Free (Plus only available for Premium+ Supporters)",
+                "reply_only": "Get only the reply, not the full JSON response'",
+                "pretty": "Ignored if \"Reply Only\" = \"No\" | Use markdown styling (prettier) for the response?'",
+                "access_token": "OPTIONAL - OVERRIDEN IF PASSED VIA URL [access_token=] . OpenAI Access Token, NOT Lukium Swarm API Key. Can be retrieved using /access-token endpoint",
+                "user_plus": "Does this access token have OpenAI Plus?",
+                "submit": ""
+            },
+            "choices": {
+                "yes": "Yes",
+                "no": "No",
+                "first_available": "First Available",
+                "plus_only" : "Plus Only",
+                "free_only" : "Free Only"
+            }
+        },
+        "chatrecall": {
+            "labels": {
+                "api_key": "API Key",
+                "conversation_id": "Conversation ID",
+                "submit": "Submit"
+            },
+            "descriptions": {
+                "api_key": "OVERRIDEN IF PASSED VIA URL [user=] . Lukium Swarm API Key, NOT OpeanAI API Key",
+                "conversation_id": "If NOT passed, will retrieve a list of all conversations' IDs and their titles. If PASSED, will retrieve the conversation's title and all messages' IDs, prompts and replies.",
+                "submit": ""
+            }
+        }
+    }
+}

@@ -6,13 +6,17 @@ import json
 with open('./language/{}.json'.format(global_settings.API_LANGUAGE), 'r',encoding="utf-8") as f:
     settings = json.load(f)
 
+from settings.Settings import LANG
+
+LANG = LANG['forms']['chatgpt']
+
 class FormChatGPT(FlaskForm):
-    api_key = StringField(settings['api_key'], validators=[DataRequired()], description=settings['api_key_desc'])    
-    prompt = TextAreaField(settings['FormChatGPT']['prompt'], validators=[DataRequired()])
-    conversation_id = StringField(settings['conversation_id'], description=settings['FormChatGPT']['conversation_id_desc'])
-    plus = SelectField(label=settings['FormChatGPT']['plus'], choices=[('any', settings['FormChatGPT']['plus_any']), ('true', settings['FormChatGPT']['plus_true']), ('false', settings['FormChatGPT']['plus_false'])], default='false', description=settings['FormChatGPT']['plus_desc'])
-    reply_only = SelectField(settings['FormChatGPT']['reply_only'], description=settings['FormChatGPT']['reply_only_desc'], choices=[('false', settings['false']), ('true', settings['true'])], default='false')
-    pretty = SelectField(settings['FormChatGPT']['pretty'], description=settings['FormChatGPT']['reply_only_desc'], choices=[('false', settings['false']), ('true', settings['true'])], default='true')    
-    access_token = StringField(settings['FormChatGPT']['access_token'], description=settings['FormChatGPT']['access_token_desc'])
-    user_plus = SelectField(label=settings['FormChatGPT']['user_plus'], choices=[('true', settings['true']), ('false', settings['false'])], default='false', description=settings['FormChatGPT']['user_plus_desc'])
-    submit = SubmitField(settings['submit'])
+    api_key = StringField(label=f'{LANG["labels"]["api_key"]}', validators=[DataRequired()], description=f'{LANG["descriptions"]["api_key"]}')
+    prompt = TextAreaField(label=f'{LANG["labels"]["prompt"]}', validators=[DataRequired()])
+    conversation_id = StringField(label=f'{LANG["labels"]["conversation_id"]}', description=f'{LANG["descriptions"]["conversation_id"]}')
+    plus = SelectField(label=f'{LANG["labels"]["plus"]}', choices=[('any', f'{LANG["choices"]["first_available"]}'), ('true', f'{LANG["choices"]["plus_only"]}'), ('false', f'{LANG["choices"]["free_only"]}')], default='false', description=f'{LANG["descriptions"]["plus"]}')
+    reply_only = SelectField(label=f'{LANG["labels"]["reply_only"]}', choices=[('false', f'{LANG["choices"]["no"]}'), ('true', f'{LANG["choices"]["yes"]}')], default='true', description=f'{LANG["descriptions"]["reply_only"]}')
+    pretty = SelectField(label=f'{LANG["labels"]["pretty"]}', choices=[('false', f'{LANG["choices"]["no"]}'), ('true', f'{LANG["choices"]["yes"]}')], default='true', description=f'{LANG["descriptions"]["pretty"]}')
+    access_token = StringField(label=f'{LANG["labels"]["access_token"]}', description=f'{LANG["descriptions"]["access_token"]}')
+    user_plus = SelectField(label=f'{LANG["labels"]["user_plus"]}', choices=[('true', f'{LANG["choices"]["yes"]}'), ('false', f'{LANG["choices"]["no"]}')], default='false', description=f'{LANG["descriptions"]["user_plus"]}')
+    submit = SubmitField(label=f'{LANG["labels"]["submit"]}')

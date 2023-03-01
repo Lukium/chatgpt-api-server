@@ -20,6 +20,7 @@ from forms.FormChatRecall import FormChatRecall
 
 #IMPORT SETTINGS
 import settings.Settings as Settings
+from settings.Settings import LANG
 
 #SETUP FLASK APP
 app = Flask(__name__)
@@ -124,8 +125,13 @@ async def chat():
         form.api_key.data = user
     if access_token is not None:
         form.access_token.data = access_token
-    message = f'Please be patient while your request is processed...'
-    message2 = f'The time required to process is proportional to the length of the reply.'
+
+    title = f'{LANG["htmls"]["index"]["title"]}'
+    message_under_title = f'{LANG["htmls"]["index"]["message_under_title"]}'
+    action_instruction = f'{LANG["htmls"]["index"]["action_instruction"]}'
+    message_after_submit_1 = f'{LANG["htmls"]["index"]["message_after_submit_1"]}'
+    message_after_submit_2 = f'{LANG["htmls"]["index"]["message_after_submit_2"]}'
+
     if form.validate_on_submit():
         #Perform User Check
         user_check = await ChatGPTServer.check_user(user=form.api_key.data)
@@ -156,7 +162,14 @@ async def chat():
                 )
             
         return response, 200
-    return render_template("index.html", form=form, message=message, message2=message2)
+    return render_template(
+        "index.html",
+        form=form, title=title,
+        message_under_title=message_under_title,
+        action_instruction=action_instruction,
+        message_after_submit_1=message_after_submit_1,
+        message_after_submit_2=message_after_submit_2
+    )
 
 @app.route(Settings.ENDPOINT_API_CHATRECALL, methods=["GET", "POST"])
 async def api_recall():
@@ -194,6 +207,11 @@ async def chat_recall():
     user = request.args.get("user", None)
     if user is not None and user != "":
         form.api_key.data = user
+
+    title = f'{LANG["htmls"]["recall"]["title"]}'
+    message_under_title = f'{LANG["htmls"]["recall"]["message_under_title"]}'
+    action_instruction = f'{LANG["htmls"]["recall"]["action_instruction"]}'
+
     if form.validate_on_submit():
         #Perform User Check
         user_check = await ChatGPTServer.check_user(user=form.api_key.data)
@@ -208,8 +226,13 @@ async def chat_recall():
         
         return response, 200
 
-    return render_template("recall.html", form=form)
-
+    return render_template(
+        "recall.html",
+        form=form,
+        title=title,
+        message_under_title=message_under_title,
+        action_instruction=action_instruction
+        )
     
 @app.route(Settings.ENDPOINT_API_ACCESS_TOKEN, methods=["GET", "POST"])
 async def api_access_token():
@@ -249,6 +272,12 @@ async def access_token():
     user = request.args.get("user", None)
     if user is not None and user != "":
         form.api_key.data = user
+    
+    title = f'{LANG["htmls"]["access_token"]["title"]}'
+    message_under_title = f'{LANG["htmls"]["access_token"]["message_under_title"]}'
+    action_instruction = f'{LANG["htmls"]["access_token"]["action_instruction"]}'
+    message = f'{LANG["htmls"]["access_token"]["message"]}'
+
     message = f'This will retrieve your current ChatGPT OpenAI Access Token using your ChatGPT Email and Password.'    
     if form.validate_on_submit():
         user = form.api_key.data
@@ -267,13 +296,23 @@ async def access_token():
             response = json.loads(f'{{"Access Token": "{access_token}"}}')
         return response, 200
 
-    return render_template("access-token.html", form=form, message=message)
+    return render_template(
+        "access-token.html",
+        form=form,
+        title=title,
+        message_under_title=message_under_title,
+        action_instruction=action_instruction,
+        message=message)
 
 @app.route(Settings.ENDPOINT_BROWSER_ADD_USER, methods=["GET", "POST"])
 async def add_user():
     response: dict = {}
     admin = request.args.get("admin", None)
     client = request.args.get("client", None)
+
+    title = f'{LANG["htmls"]["add_user"]["title"]}'
+    message_under_title = f'{LANG["htmls"]["add_user"]["message_under_title"]}'
+    action_instruction = f'{LANG["htmls"]["add_user"]["action_instruction"]}'
 
     if admin is not None and admin != "":
         admin_check = await ChatGPTServer.check_admin(user=admin)
@@ -324,7 +363,12 @@ async def add_user():
                 return jsonify(response), 422
             else:
                 return jsonify(response), 200
-        return render_template("admin/add-user.html", form=form)
+        return render_template(
+            "admin/add-user.html",
+            title=title,
+            message_under_title=message_under_title,
+            action_instruction=action_instruction,
+            form=form)
 
 @app.route(Settings.ENDPOINT_API_ADD_USER, methods=["GET", "POST"])
 async def api_add_user():

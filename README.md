@@ -1,4 +1,4 @@
-# chatgpt-api-server
+# ChatGPT-api-server
 ChatGPT Web API server Flask that can respond both via browser through Flask Forms and directly via POST/GET Requests
 
 ## Features:
@@ -11,7 +11,7 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 ### Basic Permissions:
 - Admin users can create (and soon remove) Client users or regular users
 - Client users can create (and soon remove) regular users that it created
-- Users can only use chatGPT functionality.
+- Users can only use ChatGPT functionality.
 - Users can be given access (or denied) to Plus ChatGPT accounts separately from free accounts.
 ### Account Support:
 - Multi/Single built in ChatGPT Accounts, including Pro/Free accounts: accounts will be cycled on each request (follow ups will use the original account to keep conversation integrity)
@@ -24,9 +24,9 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 - Users can recall either all conversations along with their titles or a single conversation including all messages within the conversation (both prompt and reply) sorted chronologically.
 - When a conversation is followed up, the server will automatically use the account that was used to initiate the conversation, and use the last message in that conversation for the parent id, so as to maintain perfect conversation integrity. If the account used originally is not available, the user will receive an error.
 ### Client Support:
-- "Client" users can be created by the admin, which can programatically create API keys when necessary. For example: say you wanted to create a Discord Bot that interacts with the API. You could issue it a Client API key, and the bot will be able to automatically generate API keys for users that the bot has determined should be able to access the API.
+- "Client" users can be created by the admin, which can programmatically create API keys when necessary. For example: say you wanted to create a Discord Bot that interacts with the API. You could issue it a Client API key, and the bot will be able to automatically generate API keys for users that the bot has determined should be able to access the API.
 ### WebUI:
-- Webui can be used for all functionality, including chat, followup, access-token retrival, API Key issuing.
+- WebUI can be used for all functionality, including chat, followup, access-token retrieval, API Key issuing.
 - WebUI replies can be set to use markdown so they look cleaner.
 - WebUI can also reply in pure JSON
 
@@ -40,9 +40,9 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 ### To use:
 1. Install everything in requirements.txt using `pip install -r ./requirements.txt`
 
-2. Make necessary modofications to `settings.json` file:
+2. Make necessary modifications to `settings.json` file:
 
-	In `["openai"]["instnaces"]` add at least one account to be used as a built in account. You can add as many as you like by just adding additional keys. Each instance will be cycled through via the server.
+	In `["OpenAI"]["instances"]` add at least one account to be used as a built in account. You can add as many as you like by just adding additional keys. Each instance will be cycled through via the server.
 	Each instance can also have it's own proxy by adding a `proxy` key. Proxies should be socks5 valid strings like `socks5://127.0.0.1:1080`
 
 	Modify the `["api_server"]` key to match your needs:
@@ -65,33 +65,33 @@ ChatGPT Web API server Flask that can respond both via browser through Flask For
 	This will create admin keys in your settings.json at first run, please make sure to keep these safe as they will have the power to add/remove users, access all cached conversations, etc.
 
 4. Access the API by using either GET or POST request. You can also make the request via browser with the following format:
-	The API has browser forms accessible via `/chat` endpoint for using chatgpt, `/access-token` for retrieving accesstokens and `/admin/add-user` for adding users
+	The API has browser forms accessible via `/chat` endpoint for using ChatGPT, `/access-token` for retrieving access tokens and `/admin/add-user` for adding users
 	The API has direct endpoints via `/api/chat` and `/api/access-token` for doing the same functions via POST/GET requests (add-user coming soon)
 
 	Users can only use the API if they have been issued an API Key via `/admin/add-user`
 
-	The endpoint will create a user in `./users.json` that include their API Key, username, userid, and whether they have access to plus builtin instances or not (as well as other future permissions)
+	The endpoint will create a user in `./users.json` that include their API Key, username, userID, and whether they have access to plus builtin instances or not (as well as other future permissions)
 
 	The following arguments are available for chat endpoints:
 
 	`user`: (`API KEY`, default `none`) User's API Key (Not OpenAI but the one issued via `/admin/add-user`)
 
-	`plus`: (`true` | `false` | `any`, default `false`) Will dictate whether to use a chatgpt plus instance during the request. If `true` or `any` (first available) is passed, a plus instance may be attempted and if the user doesn't have `plus` access in their credentials an exception may be thrown, therefore, users without access to plus should use `false`
+	`plus`: (`true` | `false` | `any`, default `false`) Will dictate whether to use a ChatGPT plus instance during the request. If `true` or `any` (first available) is passed, a plus instance may be attempted and if the user doesn't have `plus` access in their credentials an exception may be thrown, therefore, users without access to plus should use `false`
 
-	`prompt`: (`prompt test`, default: `prompt that lets user know they left it blank`) The prompt to be passed to chatgpt
+	`prompt`: (`prompt test`, default: `prompt that lets user know they left it blank`) The prompt to be passed to ChatGPT
 
-	`reply_only`: (`true` | `false`, default: `true` on browser, `false` on `/api`) True will return just the chatgpt text reply, rather than json with all information
+	`reply_only`: (`true` | `false`, default: `true` on browser, `false` on `/api`) True will return just the ChatGPT text reply, rather than json with all information
 
 	`pretty`: (`true` | `false`, default: `true` on browser, `false` on `/api`) Only effective if `reply_only` = `true` Will determine whether to run the reply through markdown for better looking reply, especially useful for when using the API via the browser
 
-	`access_token`: (`OpenAI Access Token`, default: None) When passed (This will essentially override `plus` with the `user_plus` parameter, since it will not be using a builtin instance), the API will create an instance of the `ChatGPT` class specifically using the access token to make a chatgpt request using the account associated with the access token rather than one of the accounts setup in `settings.json`. Access tokens can be retrieved using the `/access-token` or `/api/access-token` endpoints.
+	`access_token`: (`OpenAI Access Token`, default: None) When passed (This will essentially override `plus` with the `user_plus` parameter, since it will not be using a builtin instance), the API will create an instance of the `ChatGPT` class specifically using the access token to make a ChatGPT request using the account associated with the access token rather than one of the accounts setup in `settings.json`. Access tokens can be retrieved using the `/access-token` or `/api/access-token` endpoints.
 
-	`user_plus`: (`true` | `false`, default: `false`) Whether the account linked to the access_token has access to chatgpt Plus or not. Will determine which model to use, which may throw an exception if set to true when the user does not have access to to Plus
+	`user_plus`: (`true` | `false`, default: `false`) Whether the account linked to the access_token has access to ChatGPT Plus or not. Will determine which model to use, which may throw an exception if set to true when the user does not have access to to Plus
 
 	### Credits:
 	https://github.com/acheong08/OpenAIAuth OpenAIAuth - several modifications have been made to add functionality to the API
 
-	https://github.com/acheong08/ChatGPT-Proxy - Basic information on how to process prompts to chatgpt
+	https://github.com/acheong08/ChatGPT-Proxy - Basic information on how to process prompts to ChatGPT
 	
 	https://github.com/jgaa/shinysocks - Basic Windows Proxy server
 

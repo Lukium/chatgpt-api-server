@@ -13,6 +13,7 @@ from contrib.OpenAIAuth.Cloudflare import Cloudflare
 
 #IMPORT CLASSES
 from classes.ChatGPT import ChatGPT
+from classes.ChatGPTClient import ChatGPTClient
 
 #IMPORT HELPER FUNCTIONS
 from helpers.General import generate_api_key, json_value_exists, add_json_key
@@ -31,7 +32,7 @@ class ChatGPTServer:
         self.chatgpt_instances: list = []
         self.chatgpt_free_instances: list = []
         self.chatgpt_plus_instances: list = []
-        self.loop = None        
+        self.clients: list = []
         with open('./settings.json', 'r') as f:
             self.settings = json.load(f)
 
@@ -49,6 +50,7 @@ class ChatGPTServer:
         await self.__load_chatgpt_instances()
         await self.__refresh_cloudflare()
         await self.__load_api_users()
+        await self.__load_client_users()
         await self.__load_conversations()
         return self
 
@@ -65,6 +67,7 @@ class ChatGPTServer:
         self.chatgpt_plus_instances = [instance for instance in self.chatgpt_instances if instance.plus == True]
         print(f'ChatGPT Free Instances Loaded: {len(self.chatgpt_free_instances)}')
         print(f'ChatGPT Plus Instances Loaded: {len(self.chatgpt_plus_instances)}')
+        Settings.API_ENDPOINT_MODE = 'bp'
     
     async def __load_api_users(self) -> dict:
         """
@@ -74,6 +77,52 @@ class ChatGPTServer:
             users = (json.load(f))['API_KEYS']
         self.users = users
         Settings.API_KEYS = users
+        
+    async def __reload_client_users(self, **kwargs) -> None:
+        """
+        Reloads users belonging to a client
+        """
+        client_id_to_reload = kwargs.get('client_id_to_reload', None)
+        
+        client_instance: ChatGPTClient = [server_client for server_client in self.clients if server_client.identity == client_id_to_reload][0]
+        
+        for user, user_data in self.users.items():
+            for client in user_data['clients']:
+                if client == client_id_to_reload:
+                    if user not in client_instance.users:
+                        client_instance.users[user] = user_data
+                        client_instance.user_ids.append(user_data['user_id'])
+    
+    async def __load_client_users(self):
+        """
+        Loads all client users from users.json
+        """
+        clients_to_add = set()
+        
+        client_users_dict = {}
+        for user, user_data in self.users.items():
+            for client in user_data['clients']:
+                if client != 'self':
+                    if client not in client_users_dict:
+                        client_users_dict[client] = []
+                    client_users_dict[client].append(user)
+        
+        clients_to_add = [(client, users) for client, users in client_users_dict.items() if len(users) > 0]
+        
+        for user, user_data in self.users.items():
+            add_client = True
+            if 'is_client' in user_data:
+                if user_data['is_client'] == True:
+                    for client in clients_to_add:
+                        if client[0] == user_data['user_id']:
+                            add_client = False
+                            break
+                    if add_client == True:
+                        clients_to_add.append((user_data['user_id'], []))
+        
+        for client, client_users in clients_to_add:
+            self.clients.append(await ChatGPTClient.create(client_id=client, client_users=client_users, server_users=self.users))
+            print(f'Client {client} loaded with {len(client_users)} {len(client_users) == 1 and "user" or "users"}')
     
     async def __load_conversations(self) -> dict:
         """
@@ -86,38 +135,41 @@ class ChatGPTServer:
     async def __refresh_cloudflare(self) -> None:
         """
         Refreshes the Cloudflare Clearance and User Agent
-        """
-        current_time = datetime.now()
-        if Settings.API_LAST_CF_REFRESH is not None:
-            time_delta = (current_time - Settings.API_LAST_CF_REFRESH).total_seconds()
-            if time_delta > Settings.API_CF_REFRESH_INTERVAL:
-                refresh = True
+        """        
+        if Settings.API_ENDPOINT_MODE == None:
+            current_time = datetime.now()
+            if Settings.API_LAST_CF_REFRESH is not None:
+                time_delta = (current_time - Settings.API_LAST_CF_REFRESH).total_seconds()
+                if time_delta > Settings.API_CF_REFRESH_INTERVAL:
+                    refresh = True
+                else:
+                    refresh = False
             else:
-                refresh = False
+                refresh = True
+            if refresh:
+                print(f'Starting Cloudflare Refresh')
+                print(f'Current Cloudflare Clearance: {Settings.API_CF_CLEARANCE}')
+                print(f'Current User Agent: {Settings.API_USER_AGENT}')            
+                Settings.API_CF_CLEARANCE, Settings.API_USER_AGENT = await Cloudflare(proxy=Settings.API_DEFAULT_PROXY).a_get_cf_cookies()
+                Settings.API_LAST_CF_REFRESH = datetime.now()
+                print(f'New Cloudflare Clearance: {Settings.API_CF_CLEARANCE}')
+                print(f'New User Agent: {Settings.API_USER_AGENT}')
+                if len(self.chatgpt_instances) > 0:
+                    for instance in self.chatgpt_instances:
+                        instance.cf_clearance = Settings.API_CF_CLEARANCE
+                        instance.user_agent = Settings.API_USER_AGENT
+                if len(self.chatgpt_free_instances) > 0:
+                    for instance in self.chatgpt_free_instances:
+                        instance.cf_clearance = Settings.API_CF_CLEARANCE
+                        instance.user_agent = Settings.API_USER_AGENT
+                if len(self.chatgpt_plus_instances) > 0:
+                    for instance in self.chatgpt_plus_instances:
+                        instance.cf_clearance = Settings.API_CF_CLEARANCE
+                        instance.user_agent = Settings.API_USER_AGENT
+            else:
+                print(f'Cloudflare Refresh Not Needed - Last Refresh: {Settings.API_LAST_CF_REFRESH} - Time Delta: {time_delta} - Interval: {Settings.API_CF_REFRESH_INTERVAL}')
         else:
-            refresh = True
-        if refresh:
-            print(f'Starting Cloudflare Refresh')
-            print(f'Current Cloudflare Clearance: {Settings.API_CF_CLEARANCE}')
-            print(f'Current User Agent: {Settings.API_USER_AGENT}')            
-            Settings.API_CF_CLEARANCE, Settings.API_USER_AGENT = await Cloudflare(proxy=Settings.API_DEFAULT_PROXY).a_get_cf_cookies()
-            Settings.API_LAST_CF_REFRESH = datetime.now()
-            print(f'New Cloudflare Clearance: {Settings.API_CF_CLEARANCE}')
-            print(f'New User Agent: {Settings.API_USER_AGENT}')
-            if len(self.chatgpt_instances) > 0:
-                for instance in self.chatgpt_instances:
-                    instance.cf_clearance = Settings.API_CF_CLEARANCE
-                    instance.user_agent = Settings.API_USER_AGENT
-            if len(self.chatgpt_free_instances) > 0:
-                for instance in self.chatgpt_free_instances:
-                    instance.cf_clearance = Settings.API_CF_CLEARANCE
-                    instance.user_agent = Settings.API_USER_AGENT
-            if len(self.chatgpt_plus_instances) > 0:
-                for instance in self.chatgpt_plus_instances:
-                    instance.cf_clearance = Settings.API_CF_CLEARANCE
-                    instance.user_agent = Settings.API_USER_AGENT
-        else:
-            print(f'Cloudflare Refresh Not Needed - Last Refresh: {Settings.API_LAST_CF_REFRESH} - Time Delta: {time_delta} - Interval: {Settings.API_CF_REFRESH_INTERVAL}')
+            Settings.OPENAI_BASE_URL = Settings.OPENAI_BASE_URL.replace('chat', 'apps').replace('backend-', '')
 
     #SETUP HELPER FUNCTIONS
     async def __get_chatgpt(self, **kwargs) -> ChatGPT:
@@ -141,32 +193,6 @@ class ChatGPTServer:
             if self.current_chatgpt_plus >= len(self.chatgpt_plus_instances):
                 self.current_chatgpt_plus = 0
         return chatgpt
-    
-    async def check_client(self, **kwargs) -> dict:
-        """
-        Check if a client is valid
-        """
-        client = kwargs.get('client', None)
-        response: dict = {}
-
-        if client is None:
-            response['status'] = 'error'
-            response['message'] = 'No client specified'
-            return response
-        elif client not in self.users:
-            response['status'] = 'error'
-            response['message'] = 'Invalid client specified'
-            return response
-        else:
-            if "is_client" in self.users[client]:
-                if self.users[client]["is_client"] == True:
-                    response['status'] = 'success'
-                    response['message'] = 'Client validated'
-                else:
-                    response['status'] = 'error'
-                    response['message'] = 'Client not validated' 
-                    
-        return response
 
     async def check_user(self, **kwargs) -> dict:
         """
@@ -193,6 +219,7 @@ class ChatGPTServer:
         """
         Check if admin is valid
         """
+        await self.__load_api_users()
         user = kwargs.get('user', None)
         response: dict = {}
 
@@ -212,6 +239,9 @@ class ChatGPTServer:
                 else:
                     response['status'] = 'error'
                     response['message'] = 'Admin not validated'
+            else:
+                response['status'] = 'error'
+                response['message'] = 'Admin not validated'
 
         return response
     
@@ -219,6 +249,7 @@ class ChatGPTServer:
         """
         Check if a client is valid
         """
+        await self.__load_api_users()
         user = kwargs.get('user', None)
         response: dict = {}
 
@@ -237,8 +268,43 @@ class ChatGPTServer:
                     response['message'] = 'Client validated'
                 else:
                     response['status'] = 'error'
-                    response['message'] = 'Client not validated'        
-        print(response)
+                    response['message'] = 'Client not validated'
+            else:
+                response['status'] = 'error'
+                response['message'] = 'Admin not validated'
+
+        return response
+    
+    async def client_user_id_check(self, **kwargs) -> dict:
+        """
+        Check if a client user exists, if so return its API Key, otherwise create a new user and return its API Key
+        """
+        await self.__load_api_users()
+        client = kwargs.get('client')
+        user_id = kwargs.get('user_id')
+        username = kwargs.get('username')
+        user_id_plus = kwargs.get('user_id_plus')
+        
+        response: dict = {}
+        
+        client_id: str = self.users[client]['user_id']
+        
+        client_instance: ChatGPTClient = [server_client for server_client in self.clients if server_client.identity == client_id][0]
+        
+        if user_id not in client_instance.user_ids:
+            status, message, key = await self.add_user(client = client, userid = user_id, username = username, plus = user_id_plus)
+            response['status'] = status
+            response['message'] = message
+            response['key'] = key
+            await self.__reload_client_users(client_id_to_reload=client_id)
+        else:
+            for key, value in client_instance.users.items():
+                if value['user_id'] == user_id:
+                    response['status'] = 'success'
+                    response['message'] = 'User already exists'
+                    response['key'] = key
+                    break
+
         return response
 
     async def retrieve_access_token(self, **kwargs) -> str:
@@ -293,16 +359,12 @@ class ChatGPTServer:
             'origin_time':  response['api_prompt_time_origin'],
         }
 
-        conversations = self.conversations
-        users = self.users
+        conversations_users = deepcopy(self.conversations)
+        api_users = self.users
 
-        if client_id not in conversations['clients']:
-            add_json_key(conversations['clients'], {'users': {}}, client_id)
-        client_users = conversations['clients'][client_id]['users']
-
-        if user_id not in client_users:
-            add_json_key(client_users, {'username': users[user]['username'], 'conversations': {}}, user_id)
-        user_conversations = client_users[user_id]['conversations']
+        if user_id not in conversations_users['users']:
+            add_json_key(conversations_users['users'], {'username': api_users[user]['username'], 'conversations': {}}, user_id)
+        user_conversations = conversations_users['users'][user_id]['conversations']
             
         if conversation_id not in user_conversations:
             add_json_key(user_conversations, {'title': response['conversation_title'], 'api_instance_type': response['api_instance_type'], 'api_instance': response['api_instance_identity'], 'messages': {}}, conversation_id)
@@ -312,7 +374,7 @@ class ChatGPTServer:
             add_json_key(conversation_messages, data, message_id)
 
         with open('conversations.json', 'w') as f:
-            json.dump(conversations, f, indent=4)
+            json.dump(conversations_users, f, indent=4)
         
         await self.__load_conversations()
     
@@ -330,18 +392,12 @@ class ChatGPTServer:
         """
         Recalls a conversation from the conversation database
         """
-        client = kwargs.get('client', 'self')
         user: str = kwargs.get('user', None)
         conversation_id: str = kwargs.get('conversation_id', "")
-
-        if client == 'self' or client is None:
-            client_id = 'self'
-        else:
-            client_id = self.users[client]['user_id']
         user_id = self.users[user]['user_id']
 
         #Create a copy of the conversation data using deepcopy to avoid modifying the original data
-        user_conversations = deepcopy(self.conversations['clients'][client_id]['users'][user_id]['conversations'])        
+        user_conversations = deepcopy(self.conversations['users'][user_id]['conversations'])        
         
         response = {}
         if conversation_id == "":
@@ -371,7 +427,8 @@ class ChatGPTServer:
         """
         Process a ChatGPT request
         """
-        await self.__refresh_cloudflare()
+        if Settings.API_ENDPOINT_MODE == None:
+            await self.__refresh_cloudflare()
         client: str = kwargs.get('client', 'self')
         user: str = kwargs.get('user', None)
         prompt: str = kwargs.get('prompt', Settings.API_DEFAULT_PROMPT)
@@ -386,31 +443,25 @@ class ChatGPTServer:
         response: dict = {}
         followup: bool = False
         conversation_last_message_id: str = None
-
+        
         if client == 'self' or client is None:
             client_id = 'self'
-        else:
+        else:            
             client_id = self.users[client]['user_id']
+        
         user_id = self.users[user]['user_id']
 
         if conversation_id != "" and conversation_id is not None:
-            followup = True            
-            
-            #Check if client has conversations
-            if client_id not in self.conversations['clients']:
-                response['status'] = 'error'
-                response['message'] = 'This client does not appear to have any conversations. Please start a new conversation using this client.'
-                return response
-            else:
-                client_users = self.conversations['clients'][client_id]['users']
+            followup = True
+            conversation_users = self.conversations['users']
             
             #Check if user has conversations
-            if user_id not in client_users:
+            if user_id not in conversation_users:
                 response['status'] = 'error'
                 response['message'] = 'This user does not appear to have any conversations. Please start a new conversation using this user.'
                 return response
             else:
-                user_conversations = client_users[user_id]['conversations']
+                user_conversations = conversation_users[user_id]['conversations']
             
             #Check if conversation exists
             if conversation_id not in user_conversations:
@@ -462,20 +513,16 @@ class ChatGPTServer:
         response: dict = await chatgpt.ask(user=user, prompt=prompt, conversation_id=conversation_id, parent_message_id=conversation_last_message_id)        
 
         if followup:
-            #response['conversation_message_index'] = conversation_message_index
             response['conversation_title'] = conversation_title
             response['last_message_prompt'] = last_message_prompt
             response['last_message_reply'] = last_message_reply
-        #else:
-        #    response['conversation_message_index'] = 0
         
         response['api_client_id'] = client_id
 
         if response['status'] == 'success':
             await self.__store_conversation(client_id=client_id, user=user, response=response) #Store conversation in database
-        
-        del response['api_instance_type']
-        del response['api_instance_identity']
+            del response['api_instance_type']
+            del response['api_instance_identity']
 
         return response
 
@@ -505,23 +552,21 @@ class ChatGPTServer:
         if well_formed_response:
             return "Error: Malformed response"
     
-    async def __reload_users(self) -> None:
-        """
-        Reloads the API user database
-        """
-        with open('./users.json', 'r') as f:
-            keys = json.load(f)
-        Settings.API_KEYS = keys['API_KEYS']
-    
     async def add_user(self, **kwargs) -> tuple:
         """
         Adds a user to the user database
         """
         await self.__load_api_users()
+        client: str = kwargs.get('client', 'self')
         userid: str = kwargs.get('userid', None)
         username: str = kwargs.get('username', None)
         plus: bool = kwargs.get('plus', False)
         is_client: bool = kwargs.get('is_client', False)
+
+        if client != 'self':
+            client_id = self.users[client]['user_id']
+        else:
+            client_id = client
 
         if json_value_exists(Settings.API_KEYS, userid):
             status = 'error'
@@ -534,6 +579,7 @@ class ChatGPTServer:
                 'user_id': userid,
                 'username': username,
                 'plus': plus,
+                'clients': [client_id],
                 'is_client': is_client,
             }, api_key)
             with open('./users.json', 'r') as f:
@@ -541,7 +587,7 @@ class ChatGPTServer:
             keys['API_KEYS'] = Settings.API_KEYS
             with open('./users.json', 'w') as f:
                 json.dump(keys, f, indent=4)
-            await self.__reload_users()
+            await self.__load_api_users()
             await Settings.reload_users()
             if json_value_exists(Settings.API_KEYS, userid):
                 status = 'success'

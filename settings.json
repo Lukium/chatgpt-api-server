@@ -12,16 +12,18 @@
                 "plus": false
             }
         ],
-        "base_url": "https://chat.openai.com",
+        "access_token_refresh_interval": 86400,
+        "base_url": "https://chat.openai.com/backend-api",
         "endpoints":{
-            "conversation": "/backend-api/conversation",
-            "gen_title": "/backend-api/conversation/gen_title"
-        }        
+            "conversation": "/conversation",
+            "gen_title": "/conversation/gen_title"
+        }
     },
     "api_server": {
         "host": "192.168.11.11",
         "port": 5000,
         "default_proxy": "socks5://127.0.0.1:1080",
+        "default_user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
         "terminal_name": "ChatGPT-API-Server",
         "cf_refresh_interval": 600,
         "endpoints": {

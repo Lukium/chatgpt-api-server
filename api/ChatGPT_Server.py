@@ -37,6 +37,9 @@ async def api_chat():
         prompt = request.args.get("prompt", Settings.API_DEFAULT_PROMPT)
         client = request.args.get("client", None)
         user = request.args.get("user", None)
+        user_id = request.args.get("user_id", None)
+        username = request.args.get("username", None)
+        user_id_plus = request.args.get("user_id_plus", None)
         conversation_id = request.args.get("conversation_id", None)
         plus = request.args.get("plus", "false")
         reply_only = request.args.get("reply_only", "false")
@@ -47,6 +50,9 @@ async def api_chat():
         prompt = request.json.get("prompt", Settings.API_DEFAULT_PROMPT)
         client = request.json.get("client", None)
         user = request.json.get("user", None)
+        user_id = request.json.get("user_id", None)
+        username = request.json.get("username", None)
+        user_id_plus = request.json.get("user_id_plus", None)
         conversation_id = request.json.get("conversation_id", None)
         plus = request.json.get("plus", "false")
         reply_only = request.json.get("reply_only", "false")
@@ -54,16 +60,33 @@ async def api_chat():
         access_token = request.json.get("access_token", None)
         user_plus = request.json.get("user_plus", "false")
 
+    Skip_User_Check = False
     #Perform Client Check if client is provided
     if client is not None:
-        client_check = await ChatGPTServer.check_client(user=client)
+        client_check = await ChatGPTServer.check_client(user=client)        
         if client_check['status'] == 'error':
             return client_check, 400 #Return Error Message if Client is Invalid
+        else:
+            if user is None:
+                if user_id is None or username is None or user_id_plus is None:
+                    response = {
+                        "status": "error",
+                        "message": "[user_id], [username] and [user_id_plus] are required if [client] is provided and [user] is not provided"
+                    }
+                    return response, 400 #Return Error Message if User ID, Username and User ID Plus are not provided
+            client_user_id_check: dict = await ChatGPTServer.client_user_id_check(client=client, user_id=user_id, username=username, user_id_plus=user_id_plus)
+            if client_user_id_check['status'] == 'error':
+                return client_user_id_check, 400 #Return Error Message if Client User ID Check is Invalid
+            else:
+                user = client_user_id_check['key']
+                Skip_User_Check = True                
 
+    
     #Perform User Check
-    user_check = await ChatGPTServer.check_user(user=user)
-    if user_check['status'] == 'error':
-        return user_check, 400 #Return Error Message if User is Invalid
+    if not Skip_User_Check:
+        user_check = await ChatGPTServer.check_user(user=user)
+        if user_check['status'] == 'error':
+            return user_check, 400 #Return Error Message if User is Invalid
     
     if access_token != "" and access_token is not None:
         response: dict = await ChatGPTServer.process_chagpt_request(
@@ -321,26 +344,28 @@ async def api_add_user():
         plus = request.json.get('plus', None)
         new_user_is_client = request.json.get('is_client', 'false')
     
+    is_admin = False
+    is_client = False
     if admin is not None and admin != "":
         admin_check = await ChatGPTServer.check_admin(user=admin)
         if admin_check['status'] == 'error':
             return admin_check, 400 #Return Error Message if Admin is Invalid
         else:
-            admin = True
+            is_admin = True
     
     if client is not None and client != "":
         client_check = await ChatGPTServer.check_client(user=client)
         if client_check['status'] == 'error':
             return client_check, 400 #Return Error Message if Client is Invalid
         else:
-            client = True
+            is_client = True
     
-    if not admin and not client:
+    if not is_admin and not is_client:
         response['status'] = 'error'
         response['message'] = 'No valid Admin or Client API Key provided'
         return jsonify(response), 400
     else:
-        if client:
+        if is_client:
             if new_user_is_client == "true":
                 response['status'] = 'error'
                 response['message'] = 'Clients cannot create new clients'
@@ -356,17 +381,14 @@ async def api_add_user():
     elif new_user_is_client == "false":
         new_user_is_client = False
     
-    status, message, key = await ChatGPTServer.add_user(userid=userid, username=username, plus=plus, is_client=new_user_is_client)
+    status, message, key = await ChatGPTServer.add_user(client=client, userid=userid, username=username, plus=plus, is_client=new_user_is_client)
     response['status'] = status
     response['message'] = message
     response['api_key'] = key
     if status == 'error':
         return jsonify(response), 422
     else:
-        return jsonify(response), 200
-    
-    
-
+        return jsonify(response), 200    
 
 #Redirect Root to Browser
 @app.route("/", methods=["GET"])
@@ -374,26 +396,26 @@ def root():
     return redirect(url_for('chat'))
 
 # Load Browser Favorite Icon
-@app.route('/android-chrome-192x192.png')
+@app.route('/android-chrome-192x192.png', methods=["GET"])
 def android_chrome_192():
     return url_for('static', filename='image/android-chrome-192x192.png')
 
-@app.route('/android-chrome-512x512.png')
+@app.route('/android-chrome-512x512.png', methods=["GET"])
 def android_chrome_512():
     return url_for('static', filename='image/android-chrome-512x512.png')
 
-@app.route('/apple-touch-icon.png')
+@app.route('/apple-touch-icon.png', methods=["GET"])
 def apple_touch_icon():
     return url_for('static', filename='image/apple-touch-icon.png')
 
-@app.route('/favicon.ico')
+@app.route('/favicon.ico', methods=["GET"])
 def favicon():
     return url_for('static', filename='image/favicon.ico')
 
-@app.route('/favicon-16x16.png')
+@app.route('/favicon-16x16.png', methods=["GET"])
 def favicon_16():
     return url_for('static', filename='image/favicon-16x16.png')
 
-@app.route('/favicon-32x32.png')
+@app.route('/favicon-32x32.png', methods=["GET"])
 def favicon_32():
     return url_for('static', filename='image/favicon-32x32.png')

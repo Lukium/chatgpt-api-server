@@ -44,7 +44,7 @@ update_users = False
 if len(API_KEYS) == 0:
     update_users = True
     new_key = generate_api_key()
-    add_json_key(API_KEYS, {'user_id': 'changeme', 'username': 'changeme', 'plus': False, 'is_admin': True, 'is_client': True}, new_key)
+    add_json_key(API_KEYS, {'user_id': 'changeme', 'username': 'changeme', 'plus': False, 'is_admin': True, 'is_client': True, 'clients': ['self']}, new_key)
 
 if update_users:
     users['API_KEYS'] = API_KEYS
@@ -64,6 +64,7 @@ async def reload_users():
     API_KEYS = users['API_KEYS']
 
 #SETUP OPENAI API DEFAULTS
+OPENAI_ACCESS_TOKEN_REFRESH_INTERVAL = int(settings['openai']['access_token_refresh_interval'])
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL") or str(settings['openai']['base_url'])
 OPENAI_ENDPOINT_CONVERSATION = os.environ.get("OPENAI_CONVERSATION_ENDPOINT") or str(settings['openai']['endpoints']['conversation'])
 OPENAI_ENDPOINT_GEN_TITLE = os.environ.get("OPENAI_GEN_TITLE_ENDPOINT") or str(settings['openai']['endpoints']['gen_title'])
@@ -80,6 +81,7 @@ API_LAST_CF_REFRESH: datetime = None
 
 #SETUP API DEFAULTS
 API_DEFAULT_PROXY = settings['api_server']['default_proxy']
+API_DEFAULT_USER_AGENT = settings['api_server']['default_user_agent']
 API_APP_SECRET = settings['api_server']['app_secret']
 API_CF_REFRESH_INTERVAL = settings['api_server']['cf_refresh_interval']
 API_HOST = os.environ.get("API_HOST") or str(settings['api_server']['host'])
@@ -93,6 +95,7 @@ API_DEFAULT_PROMPT = (
 )
 
 #SETUP API ENDPOINT URL CONSTANS
+API_ENDPOINT_MODE = None
 BROWSER_ENDPOINTS = settings['api_server']['endpoints']['browser']
 API_ENDPOINTS = settings['api_server']['endpoints']['api']
 

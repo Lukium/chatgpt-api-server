@@ -1,5 +1,5 @@
 #IMPORT BUILT-IN LIBRARIES
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import uuid
 
@@ -14,7 +14,7 @@ from contrib.OpenAIAuth.Cloudflare import Cloudflare
 import settings.Settings as Settings
 
 #IMPORT HELPERS
-from helpers.General import is_valid_socks5_url
+from helpers.General import is_valid_socks5_url, json_key_exists, add_json_key
 
 class ChatGPT:
     def __init__(self, **kwargs) -> None:
@@ -73,7 +73,6 @@ class ChatGPT:
 
         #Use the user's APU key as identity
         self.identity = self.user
-
     
     async def __configure(self):
         with open('./settings.json', 'r') as f:
@@ -137,18 +136,22 @@ class ChatGPT:
         Refreshes the session's cookies and headers with the latest available information from login()
         """
         self.session.cookies.clear()
-        self.session.cookies.update(
-            {
-                "cf_clearance": self.cf_clearance,
-                #"__Secure-next-auth.session-token": self.session_token
-            }
-        )
+        if Settings.API_ENDPOINT_MODE == None:
+            self.session.cookies.update(
+                {
+                    "cf_clearance": self.cf_clearance,
+                    #"__Secure-next-auth.session-token": self.session_token
+                }
+            )
+        else:
+            Settings.API_USER_AGENT = Settings.API_DEFAULT_USER_AGENT
+            self.user_agent = Settings.API_USER_AGENT
             
         self.session.headers.clear()
         self.session.headers.update(
             {
-                #"Accept": "text/event-stream",
-                "Accept": "application/json",
+                "Accept": "text/event-stream",
+                #"Accept": "application/json",
                 "Authorization": f"Bearer {self.access_token}",
                 "User-Agent": self.user_agent,
                 "Content-Type": "application/json",
@@ -160,6 +163,19 @@ class ChatGPT:
         )
 
     async def __login(self):
+        if self.type == 'builtin':
+            with open('./access_tokens.json', 'r') as f:
+                access_tokens = json.load(f)
+            if self.identity in access_tokens['accounts']:
+                if 'expires_at' in access_tokens['accounts'][self.identity]:
+                    if 'access_token' in access_tokens['accounts'][self.identity]:
+                        now = datetime.now()
+                        expires_at = datetime.strptime(access_tokens['accounts'][self.identity]['expires_at'], '%Y-%m-%d %H:%M:%S.%f')
+                        if now < expires_at:
+                            self.access_token = access_tokens['accounts'][self.identity]['access_token']
+                            await self.__refresh()
+                            return
+            
         auth = OpenAIAuth(
             email_address=self.email,
             password=self.password,
@@ -167,29 +183,23 @@ class ChatGPT:
         )
         await auth.begin()
         self.access_token = await auth.get_access_token()
+        if self.type == 'builtin':
+            with open('./access_tokens.json', 'r') as f:
+                access_tokens = json.load(f)
+            if not json_key_exists(access_tokens, 'accounts', self.identity, 'expires_at'):
+                add_json_key(access_tokens['accounts'], {'expires_at': None}, self.identity)
+            if not json_key_exists(access_tokens, 'accounts', self.identity, 'access_token'):
+                add_json_key(access_tokens['accounts'], {'access_token': None}, self.identity)
+                
+            expires_at = datetime.now() + timedelta(seconds=Settings.OPENAI_ACCESS_TOKEN_REFRESH_INTERVAL)
+            access_token = self.access_token
+            access_tokens['accounts'][self.identity]['expires_at'] = str(expires_at)
+            access_tokens['accounts'][self.identity]['access_token'] = access_token            
+            with open('./access_tokens.json', 'w') as f:
+                json.dump(access_tokens, f, indent=4)
+        
         #self.session_token = await auth.get_session_token()
         await self.__refresh()
-    
-    async def __response_check(self, response_text: str):
-        try: #If response has errors, the response should be a json string
-            response_to_check = json.loads(response_text)
-            expired_cookies_warning = '<div id="no-cookie-warning" class="cookie-warning" style="display:none">'
-            if "detail" in response_to_check:
-                status = "error"
-                message = response_to_check["detail"]
-                return status, message
-            elif expired_cookies_warning in response_to_check:
-                status = "error"
-                message = "Cookies Expired, run refresh_cloudflare()"
-                return status, message
-            else:
-                status = "unknown error"
-                message = json.dumps(response_to_check, indent=4)
-                return status, message
-        except: #If response is good, the response should be a string which will cause an error when trying to load it as json
-            status = "success"
-            message = "No Errors"
-            return status, message
     
     async def refresh_cloudflare():
         Settings.API_CF_CLEARANCE, Settings.API_USER_AGENT = await Cloudflare(proxy=Settings.API_DEFAULT_PROXY).a_get_cf_cookies()
@@ -217,7 +227,7 @@ class ChatGPT:
             proxy=self.proxy
         )        
         await auth.begin()
-        self.access_token = await auth.get_access_token()
+        self.access_token = await auth.get_access_token()        
         self.session_token = await auth.get_session_token()
         await self.cloudflare()
         await self.__refresh()
@@ -238,8 +248,40 @@ class ChatGPT:
         cookies = self.session.cookies,
         data = json.dumps(request_body),
         timeout_seconds = 360
-        )
-        return response
+        )        
+        if response.status_code == 200:
+            return response
+        else:
+            error_response = {}
+            error_response['status'] = 'error'
+            error_response['code'] = response.status_code
+            error_response['text'] = response.text
+            return error_response
+    
+    async def __process_error(self, **kwargs):
+        response: dict = kwargs.get("response")
+        code = response['code']
+        text = response['text']
+        print(f'Error - Response: {text}\n\n')
+        print(f'Error - Response Status: {code}\n\n')
+        error_response = {}
+        if code == 500:
+            error_response['status'] = 'error'
+            error_response['code'] = code
+            error_response['message'] = text
+        elif 'A timeout occurred' in text and code == 524:
+            error_response['status'] = 'error'
+            error_response['code'] = code
+            error_response['message'] = 'A timeout occurred'
+        elif '<div id="no-cookie-warning" class="cookie-warning" style="display:none">' in text:
+            error_response['status'] = 'error'
+            error_response['code'] = code
+            error_response['message'] = 'Cookies Expired'
+        elif code == 405:
+            error_response['status'] = 'error'
+            error_response['code'] = code
+            error_response['message'] = 'Method Not Allowed'
+        return error_response
      
     async def ask(self, **kwargs):
         await self.__refresh()
@@ -290,29 +332,19 @@ class ChatGPT:
 
         response = await self.__chatgpt_post(request_body=request_body)
 
-        response_status = await self.__response_check(response.text)
-        if response_status[0] == 'error':
-            response: dict = {}
-            if response_status[1] == 'Cookies Expired, run refresh_cloudflare()':
-                await self.refresh_cloudflare()
-                if self.type == 'user':
-                    await self.__refresh()
-                response = await self.__chatgpt_post(request_body=request_body)
-                response_status = await self.__response_check(response.text)
-                if response_status[0] == 'error':
-                    if response_status[1] == 'Cookies Expired, run refresh_cloudflare()':
-                        response['status'] = response_status[0]
-                        response['message'] = 'Cookies appear to be expired even after refreshing them. Please contact Admin.'
-            else:
-                response['status'] = response_status[0]
-                response['message'] = response_status[1]
-        else:
-            step_1 = str(response.text).replace('data: [DONE]','').strip() # Remove the "data: [DONE]" from the response as well as leading and trailing whitespace
-            step_2 = step_1.rfind('data: {"message": {"id": "') # Find the last occurance of the string (data: {"message": {"id": ") in the response
-            step_3 = (step_1[step_2:]).strip() # Slice the response from the last occurance of the string (data: {"message": {"id": ") to the end of the response and remove leading and trailing whitespace
-            step_4 = step_3.find(' ') # Find the first occurance of a space in the response
-            step_5 = (step_3[step_4:]).strip() # Slice the response from the beginning of the response to the first occurance of a space and remove leading and trailing whitespace
-            response = json.loads(step_5) # Convert the response to a dictionary        
+        if type(response) == dict:        
+            if 'status' in response:             
+                if response['status'] == 'error':
+                    response: dict = await self.__process_error(response=response)
+                    return response            
+
+        step_1 = str(response.text).replace('data: [DONE]','').strip() # Remove the "data: [DONE]" from the response as well as leading and trailing whitespace
+        step_2 = step_1.rfind('data: {"message": {"id": "') # Find the last occurance of the string (data: {"message": {"id": ") in the response
+        step_3 = (step_1[step_2:]).strip() # Slice the response from the last occurance of the string (data: {"message": {"id": ") to the end of the response and remove leading and trailing whitespace
+        step_4 = step_3.find(' ') # Find the first occurance of a space in the response
+        step_5 = (step_3[step_4:]).strip() # Slice the response from the beginning of the response to the first occurance of a space and remove leading and trailing whitespace
+        #print(f'Step 5: {step_5}')
+        response = json.loads(step_5) # Convert the response to a dictionary        
 
         #GENERATE RESPONSE TITLE
         if conversation_id == "" or conversation_id is None: #Only generate title if conversation_id is not provided, which means it's a new conversation

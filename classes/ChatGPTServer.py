@@ -552,6 +552,50 @@ class ChatGPTServer:
         if well_formed_response:
             return "Error: Malformed response"
     
+    async def get_user_from_user_id(self, **kwargs) -> dict:
+        """
+        Returns the user API key from the user id
+        """
+        user_id: str = kwargs.get('user_id', None)
+
+        response = {'status': 'success', 'message': 'User found', 'user': None}
+        
+        for user in self.users:
+            if self.users[user]['user_id'] == user_id:
+                response['user'] = user
+                return response
+            
+        response['status'] = 'error'
+        response['message'] = 'User not found'
+        return response
+            
+
+    async def remove_conversation(self, **kwargs) -> dict:
+        """
+        Removes a conversation from the database
+        """
+        user: str = kwargs.get('user', None)
+        conversation_id: str = kwargs.get('conversation_id', None)
+        response: dict = {'status': 'success', 'message': 'Conversation removed successfully'}
+
+        user_id = self.users[user]['user_id']
+        if conversation_id in self.conversations['users'][user_id]['conversations']:
+            del self.conversations['users'][user_id]['conversations'][conversation_id]
+            await self.__save_conversations()
+            return response
+        else:
+            response['status'] = 'error'
+            response['message'] = 'Conversation not found'
+            return response
+    
+    async def __save_conversations(self) -> None:
+        """
+        Saves the conversations to the database
+        """
+
+        with open('./conversations.json', 'w') as f:
+            json.dump(self.conversations, f, indent=4)
+
     async def add_user(self, **kwargs) -> tuple:
         """
         Adds a user to the user database

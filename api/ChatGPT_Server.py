@@ -370,6 +370,74 @@ async def add_user():
             action_instruction=action_instruction,
             form=form)
 
+@app.route(Settings.ENDPOINT_API_REMOVE_CONVERSATION, methods=["GET", "POST"])
+async def api_remove_conversation() -> dict:
+    response: dict = {}
+    if request.method == 'GET':
+        admin = request.args.get('admin', None)
+        client = request.args.get('client', None)
+        user = request.args.get('user', None)
+        user_id = request.args.get('user_id', None)
+        conversation_id = request.args.get('conversation_id', None)
+    elif request.method == 'POST':
+        admin = request.json.get('admin', None)
+        client = request.json.get('client', None)
+        user = request.json.get('user', None)
+        user_id = request.json.get('user_id', None)
+        conversation_id = request.json.get('conversation_id', None)
+    
+    is_admin = False
+    is_client = False
+    is_user = False
+
+    if admin is not None and admin != "":
+        admin_check = await ChatGPTServer.check_admin(user=admin)
+        if admin_check['status'] == 'error':
+            return admin_check, 400 #Return Error Message if Admin is Invalid
+        else:
+            is_admin = True
+
+    
+    Skip_User_Check = False
+    #Perform Client Check if client is provided
+    if client is not None:
+        client_check = await ChatGPTServer.check_client(user=client)        
+        if client_check['status'] == 'error':
+            return client_check, 400 #Return Error Message if Client is Invalid
+        else:
+            is_client = True
+            if user is None:
+                if user_id is None:
+                    response = {
+                        "status": "error",
+                        "message": "[user_id] is required if [client] is provided and [user] is not provided"
+                    }
+                    return response, 400 #Return Error Message if User ID, Username and User ID Plus are not provided
+                get_user_from_user_id: dict = await ChatGPTServer.get_user_from_user_id(user_id=user_id)
+                if get_user_from_user_id['status'] == 'error':
+                    return get_user_from_user_id, 400 #Return Error Message if Client User ID Check is Invalid
+                else:
+                    user = get_user_from_user_id['user']
+                    is_user = True                
+                    Skip_User_Check = True
+
+    if not Skip_User_Check:
+        if user is not None and user != "":
+            user_check = await ChatGPTServer.check_user(user=user)
+            if user_check['status'] == 'error':
+                return user_check, 400 #Return Error Message if User is Invalid
+            else:
+                is_user = True
+    
+    if not is_admin and not is_client and not is_user:
+        response['status'] = 'error'
+        response['message'] = 'No valid Admin, Client or User provided'
+        return jsonify(response), 400
+    else:
+        response: dict = await ChatGPTServer.remove_conversation(user=user, conversation_id=conversation_id)
+        return jsonify(response), 200
+
+
 @app.route(Settings.ENDPOINT_API_ADD_USER, methods=["GET", "POST"])
 async def api_add_user():
     response: dict = {}

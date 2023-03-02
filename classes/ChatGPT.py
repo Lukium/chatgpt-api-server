@@ -297,9 +297,9 @@ class ChatGPT:
             if turbo == True:
                 model = "text-davinci-002-render-sha"
             else:
-                model = "text-davinci-002-render-paid"
+                model = "text-davinci-002-render-sha"
         else:
-            model = "text-davinci-002-render"
+            model = "text-davinci-002-render-sha"
         
         request_body = {
         "action": "next",
